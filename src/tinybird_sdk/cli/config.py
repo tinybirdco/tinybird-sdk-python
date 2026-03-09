@@ -97,6 +97,40 @@ def _interpolate_env_vars(value: str) -> str:
     return pattern.sub(replacer, value)
 
 
+def _try_interpolate_env_vars(value: str | None) -> str | None:
+    if not value:
+        return None
+    try:
+        return _interpolate_env_vars(value)
+    except ValueError:
+        return None
+
+
+def _resolve_base_url_from_env() -> str | None:
+    return os.getenv("TINYBIRD_URL") or os.getenv("TINYBIRD_HOST")
+
+
+def _read_tinyb_auth(config_dir: str) -> dict[str, str | None]:
+    tinyb_path = Path(config_dir) / ".tinyb"
+    if not tinyb_path.exists() or not tinyb_path.is_file():
+        return {"token": None, "host": None}
+
+    try:
+        raw = json.loads(tinyb_path.read_text(encoding="utf-8"))
+    except Exception:
+        return {"token": None, "host": None}
+
+    if not isinstance(raw, dict):
+        return {"token": None, "host": None}
+
+    token = raw.get("token")
+    host = raw.get("host")
+    return {
+        "token": token if isinstance(token, str) and token else None,
+        "host": host if isinstance(host, str) and host else None,
+    }
+
+
 def find_config_file(start_dir: str) -> dict[str, str] | None:
     current = Path(start_dir).resolve()
 
@@ -117,16 +151,26 @@ def _resolve_config(config: TinybirdConfig, config_path: str) -> ResolvedConfig:
         raise ValueError(
             f"Missing 'include' field in {config_path}. Add an array of files to scan for datasources and pipes."
         )
-    if not config.token:
-        raise ValueError(f"Missing 'token' field in {config_path}")
 
     include = config.include or [config.schema]  # type: ignore[list-item]
 
     config_dir = str(Path(config_path).parent)
     load_env_files(config_dir)
+    tinyb_auth = _read_tinyb_auth(config_dir)
 
-    token = _interpolate_env_vars(config.token)
-    base_url = _interpolate_env_vars(config.base_url) if config.base_url else DEFAULT_BASE_URL
+    token = _try_interpolate_env_vars(config.token) or os.getenv("TINYBIRD_TOKEN") or tinyb_auth["token"]
+    if not token:
+        raise ValueError(
+            f"Missing Tinybird token in {config_path}. "
+            "Set 'token' in config, TINYBIRD_TOKEN, or authenticate with Tinybird CLI to create .tinyb."
+        )
+
+    base_url = (
+        _try_interpolate_env_vars(config.base_url)
+        or _resolve_base_url_from_env()
+        or tinyb_auth["host"]
+        or DEFAULT_BASE_URL
+    )
 
     return ResolvedConfig(
         include=include,

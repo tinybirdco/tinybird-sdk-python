@@ -476,9 +476,11 @@ config = {
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `include` | `list[str]` | *required* | File paths or glob patterns for Python and raw datafiles |
-| `token` | `str` | *required* | API token; supports `${ENV_VAR}` interpolation |
+| `token` | `str` | *required* | API token; supports `${ENV_VAR}` interpolation. If missing, SDK falls back to `TINYBIRD_TOKEN`, then `.tinyb` |
 | `base_url` | `str` | `"https://api.tinybird.co"` | Tinybird API URL |
 | `dev_mode` | `"branch"` \| `"local"` | `"branch"` | Development mode |
+
+If `base_url` is omitted, SDK resolves it from `TINYBIRD_URL`, then `TINYBIRD_HOST`, then `.tinyb` (`host`), and finally defaults to `https://api.tinybird.co`.
 
 ### Local Development Mode
 

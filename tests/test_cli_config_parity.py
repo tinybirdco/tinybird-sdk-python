@@ -88,6 +88,72 @@ def test_load_config_async_supports_python(tmp_path: Path, monkeypatch: pytest.M
     assert loaded["include"] == ["lib/datasources.py"]
 
 
+def test_load_config_falls_back_to_env_when_token_and_base_url_are_missing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    project = tmp_path / "project"
+    project.mkdir()
+
+    (project / "tinybird.config.json").write_text(
+        json.dumps({"include": ["lib/datasources.py"]}),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setenv("TINYBIRD_TOKEN", "p.from_env")
+    monkeypatch.setenv("TINYBIRD_HOST", "https://api.us-east-1.aws.tinybird.co")
+    monkeypatch.delenv("TINYBIRD_URL", raising=False)
+
+    loaded = load_config(str(project))
+    assert loaded["token"] == "p.from_env"
+    assert loaded["base_url"] == "https://api.us-east-1.aws.tinybird.co"
+
+
+def test_load_config_falls_back_to_tinyb_file_when_config_and_env_are_missing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    project = tmp_path / "project"
+    project.mkdir()
+
+    (project / "tinybird.config.json").write_text(
+        json.dumps({"include": ["lib/datasources.py"]}),
+        encoding="utf-8",
+    )
+    (project / ".tinyb").write_text(
+        json.dumps(
+            {
+                "token": "p.from_tinyb",
+                "host": "https://api.eu-central-1.aws.tinybird.co",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.delenv("TINYBIRD_TOKEN", raising=False)
+    monkeypatch.delenv("TINYBIRD_URL", raising=False)
+    monkeypatch.delenv("TINYBIRD_HOST", raising=False)
+
+    loaded = load_config(str(project))
+    assert loaded["token"] == "p.from_tinyb"
+    assert loaded["base_url"] == "https://api.eu-central-1.aws.tinybird.co"
+
+
+def test_load_config_raises_when_no_token_sources_are_available(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    project = tmp_path / "project"
+    project.mkdir()
+
+    (project / "tinybird.config.json").write_text(
+        json.dumps({"include": ["lib/datasources.py"]}),
+        encoding="utf-8",
+    )
+
+    monkeypatch.delenv("TINYBIRD_TOKEN", raising=False)
+    monkeypatch.delenv("TINYBIRD_URL", raising=False)
+    monkeypatch.delenv("TINYBIRD_HOST", raising=False)
+
+    with pytest.raises(ValueError, match="Missing Tinybird token"):
+        load_config(str(project))
+
+
 def test_path_helpers_with_and_without_src_folder(tmp_path: Path) -> None:
     no_src = tmp_path / "no-src"
     no_src.mkdir()
