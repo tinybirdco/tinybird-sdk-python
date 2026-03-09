@@ -1,0 +1,7 @@
+DESCRIPTION >
+    Event stream
+SCHEMA >
+    id Int32
+    country String
+ENGINE "MergeTree"
+ENGINE_SORTING_KEY "id"
