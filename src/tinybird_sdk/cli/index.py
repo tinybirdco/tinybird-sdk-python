@@ -6,6 +6,7 @@ import json
 import sys
 
 from .commands.generate import run_generate
+from .commands.migrate import run_migrate
 from .output import output
 
 
@@ -47,45 +48,91 @@ def create_cli() -> argparse.ArgumentParser:
     generate_cmd.add_argument("--json", action="store_true")
     generate_cmd.add_argument("-o", "--output-dir")
 
+    migrate_cmd = sub.add_parser("migrate", help="Migrate Tinybird .datasource/.pipe files to Python resources")
+    migrate_cmd.add_argument("patterns", nargs="+", help="Files, directories, or glob patterns to migrate")
+    migrate_cmd.add_argument("--cwd", help="Working directory to resolve patterns from")
+    migrate_cmd.add_argument("-o", "--out", help="Output file path for the generated migration module")
+    migrate_cmd.add_argument("--dry-run", action="store_true", help="Generate output without writing files")
+    migrate_cmd.add_argument("--force", action="store_true", help="Overwrite existing output file when needed")
+    migrate_cmd.add_argument(
+        "--strict",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Fail on migration issues (disable with --no-strict)",
+    )
+    migrate_cmd.add_argument("--json", action="store_true", help="Print migration result as JSON")
+
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     normalized_argv = list(argv) if argv is not None else list(sys.argv[1:])
 
-    # `generate` is owned by the SDK; all other commands are delegated to Tinybird CLI.
-    if not normalized_argv or normalized_argv[0] != "generate":
+    # SDK-owned commands stay local; all other commands are delegated to Tinybird CLI.
+    if not normalized_argv or normalized_argv[0] not in {"generate", "migrate"}:
         return _run_installed_tinybird_cli(normalized_argv)
 
     parser = create_cli()
     args = parser.parse_args(normalized_argv)
 
-    result = run_generate({"output_dir": args.output_dir})
-    if not result.success:
-        output.error(result.error or "Generate failed")
-        return 1
+    if args.command == "generate":
+        result = run_generate({"output_dir": args.output_dir})
+        if not result.success:
+            output.error(result.error or "Generate failed")
+            return 1
 
-    if args.json:
-        _print_json(asdict(result))
+        if args.json:
+            _print_json(asdict(result))
+            return 0
+
+        stats = result.stats or {
+            "datasource_count": 0,
+            "pipe_count": 0,
+            "connection_count": 0,
+            "total_count": 0,
+        }
+        print(
+            "Generated "
+            f"{stats['total_count']} resources "
+            f"({stats['datasource_count']} datasources, "
+            f"{stats['pipe_count']} pipes, "
+            f"{stats['connection_count']} connections)"
+        )
+        if result.output_dir:
+            print(f"Written to: {result.output_dir}")
+        print(f"Completed in {output.format_duration(result.duration_ms)}")
         return 0
 
-    stats = result.stats or {
-        "datasource_count": 0,
-        "pipe_count": 0,
-        "connection_count": 0,
-        "total_count": 0,
-    }
-    print(
-        "Generated "
-        f"{stats['total_count']} resources "
-        f"({stats['datasource_count']} datasources, "
-        f"{stats['pipe_count']} pipes, "
-        f"{stats['connection_count']} connections)"
+    result = run_migrate(
+        {
+            "cwd": args.cwd,
+            "patterns": args.patterns,
+            "out": args.out,
+            "strict": args.strict,
+            "dry_run": args.dry_run,
+            "force": args.force,
+        }
     )
-    if result.output_dir:
-        print(f"Written to: {result.output_dir}")
-    print(f"Completed in {output.format_duration(result.duration_ms)}")
-    return 0
+
+    if args.json:
+        _print_json(result)
+        return 0 if result["success"] else 1
+
+    if result["success"]:
+        migrated_count = len(result.get("migrated") or [])
+        print(f"Migrated {migrated_count} resources")
+        if result.get("output_path"):
+            print(f"Written to: {result['output_path']}")
+        return 0
+
+    errors = result.get("errors") or []
+    if errors:
+        output.error(f"Migrate failed with {len(errors)} error(s)")
+        for error in errors:
+            output.error(str(error))
+    else:
+        output.error("Migrate failed")
+    return 1
 
 
 if __name__ == "__main__":

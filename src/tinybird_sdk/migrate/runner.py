@@ -242,7 +242,7 @@ def run_migrate(options: MigrateOptions | dict[str, Any]) -> MigrationResult:
                     resource_kind=pipe.kind,
                     message=(
                         f'Materialized pipe references missing/unmigrated datasource '
-                        f'"{pipe.materialized_datasource or '(none)'}".'
+                        f'"{pipe.materialized_datasource or "(none)"}".'
                     ),
                 )
             )
@@ -258,7 +258,7 @@ def run_migrate(options: MigrateOptions | dict[str, Any]) -> MigrationResult:
                     resource_kind=pipe.kind,
                     message=(
                         f'Copy pipe references missing/unmigrated datasource '
-                        f'"{pipe.copy_target_datasource or '(none)'}".'
+                        f'"{pipe.copy_target_datasource or "(none)"}".'
                     ),
                 )
             )

@@ -56,12 +56,17 @@ def test_run_installed_tinybird_cli_errors_when_dependency_missing(monkeypatch: 
     assert cli_index._run_installed_tinybird_cli(["build"]) == 1
 
 
-def test_cli_entrypoint_delegates_non_generate_commands(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_cli_entrypoint_delegates_non_sdk_commands(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(cli_index, "_run_installed_tinybird_cli", lambda argv: 7 if argv == ["build", "--dry-run"] else 1)
     monkeypatch.setattr(
         cli_index,
         "run_generate",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("generate should not run")),
+    )
+    monkeypatch.setattr(
+        cli_index,
+        "run_migrate",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("migrate should not run")),
     )
     assert cli_index.main(["build", "--dry-run"]) == 7
 
@@ -99,6 +104,31 @@ def test_cli_entrypoint_runs_generate_locally(monkeypatch: pytest.MonkeyPatch, c
     assert cli_index.main(["generate"]) == 0
     out = capsys.readouterr().out
     assert "Generated 2 resources (1 datasources, 1 pipes, 0 connections)" in out
+
+
+def test_cli_entrypoint_runs_migrate_locally(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+    monkeypatch.setattr(
+        cli_index,
+        "_run_installed_tinybird_cli",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("should not delegate migrate")),
+    )
+    monkeypatch.setattr(
+        cli_index,
+        "run_migrate",
+        lambda *_args, **_kwargs: {
+            "success": True,
+            "output_path": "/tmp/tinybird.migration.py",
+            "migrated": ["a", "b"],
+            "errors": [],
+            "dry_run": False,
+            "output_content": None,
+        },
+    )
+
+    assert cli_index.main(["migrate", "legacy.datasource"]) == 0
+    out = capsys.readouterr().out
+    assert "Migrated 2 resources" in out
+    assert "Written to: /tmp/tinybird.migration.py" in out
 
 
 def test_cli_entrypoint_runs_generate_json_output(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
@@ -141,3 +171,18 @@ def test_cli_entrypoint_generate_failure_returns_error(monkeypatch: pytest.Monke
         lambda *_args, **_kwargs: SimpleNamespace(success=False, error="boom", duration_ms=1),
     )
     assert cli_index.main(["generate"]) == 1
+
+
+def test_cli_entrypoint_migrate_failure_returns_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    _mute_output(monkeypatch)
+    monkeypatch.setattr(
+        cli_index,
+        "_run_installed_tinybird_cli",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("should not delegate migrate")),
+    )
+    monkeypatch.setattr(
+        cli_index,
+        "run_migrate",
+        lambda *_args, **_kwargs: {"success": False, "errors": ["boom"]},
+    )
+    assert cli_index.main(["migrate", "legacy.datasource"]) == 1
