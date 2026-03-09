@@ -1,33 +1,29 @@
-[build-system]
-requires = ["setuptools>=42", "wheel"]
-build-backend = "setuptools.build_meta"
-
 [project]
-name = "tinybird-python-sdk"
-version = "0.3.5"
-description = "Python SDK for Tinybird"
+name = "tinybird-sdk"
+version = "0.1.0"
+description = "Python SDK for Tinybird Forward"
 readme = "README.md"
 authors = [
-    {name = "tinybird.co", email = "support@tinybird.co"},
+    { name = "Rafa Moreno", email = "rmoreno@tinybird.co" }
 ]
+requires-python = ">=3.11"
 dependencies = [
-    "requests~=2.32",
-    "aiohttp~=3.10",
-    "backoff~=2.2",
+    "tinybird",
 ]
 
-[project.optional-dependencies]
-ai = [
-    "litellm>=1.62.1"
+[project.scripts]
+tinybird = "tinybird_sdk.cli.index:main"
+
+[build-system]
+requires = ["uv_build>=0.9.26,<0.10.0"]
+build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+addopts = "-q"
+testpaths = ["tests"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
 ]
-
-[project.urls]
-homepage = "https://github.com/tinybirdco/tinybird-python-sdk"
-
-[tool.black]
-line-length = 88
-target-version = ['py37']
-include = '\.pyi?$'
-
-[tool.setuptools]
-packages = ["tb", "tb.a", "tb.litellm"] 

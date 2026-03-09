@@ -1,182 +1,288 @@
-# Tinybird Python SDK
+# tinybird-sdk (Python)
 
-SDK around [Tinybird](https://www.tinybird.co/) APIs.
+Python SDK for Tinybird with a TypeScript-SDK-like surface.
 
-If you want to manage Workspaces, Data Sources and Pipes you might be looking for the [tinybird-cli](https://pypi.org/project/tinybird-cli/).
+It includes:
 
-The SDK is meant to programatically ingest `NDJSON` data or send any request to an `API` instance.
+- A low-level API wrapper (`TinybirdApi` / `createTinybirdApi`)
+- A high-level runtime client (`TinybirdClient` / `createClient`)
+- Schema DSL (`t`, `p`, `engine`, `defineDatasource`, `definePipe`, `defineProject`)
+- Resource generation helpers (`generateResources`, `build`, `buildFromInclude`)
+- API helpers for branches, workspaces, tokens, regions, dashboard URLs, and local mode
 
-It contains handlers for:
-- logging events to a Tinybird Data Source from your Python module.
-- logging events from [litellm](https://www.litellm.ai/) to a Tinybird Data Source.
+## Requirements
 
-## Ingest to a Tinybird DataSource
+- Python `>=3.11`
+- [`uv`](https://docs.astral.sh/uv/) for environment and dependency management
+
+## Setup with uv
+
+From the repository root:
+
+```bash
+cd python
+uv sync --dev
+```
+
+This creates `.venv` and installs the package in editable mode with dev dependencies.
+
+## Development Commands
+
+Run from `python/`:
+
+```bash
+# Run test suite
+uv run pytest
+
+# Quick syntax validation
+uv run python -m compileall -q src
+
+# Build wheel/sdist
+uv build
+```
+
+## Quick Start
+
+### 1) Low-level API wrapper
+
+Use this when you want direct HTTP-like operations.
 
 ```python
-from tb.datasource import Datasource
+from tinybird_sdk import createTinybirdApi
 
-with Datasource(datasource_name, tinybird_token) as ds:
-    ds << {'key': 'value', 'key1': 'value1'}
+api = createTinybirdApi({
+    "baseUrl": "https://api.tinybird.co",
+    "token": "p.your_token",
+})
+
+# Query endpoint pipe
+result = api.query("top_pages", {"limit": 10})
+
+# Ingest event
+api.ingest("events", {
+    "timestamp": "2026-01-01T00:00:00Z",
+    "event_name": "page_view",
+})
+
+# Execute SQL
+rows = api.sql("SELECT 1 AS value")
 ```
 
-You can also use the async version:
+### 2) High-level runtime client
+
+Use this when you want a more SDK-oriented client with datasource namespace operations.
 
 ```python
-from tb.a.datasource import AsyncDatasource
+from tinybird_sdk import createClient
 
-async with AsyncDatasource(datasource_name, tinybird_token, api_url='https://api.us-east.tinybird.co') as ds:
-    await ds << {'key': 'value', 'key1': 'value1'}
+client = createClient({
+    "baseUrl": "https://api.tinybird.co",
+    "token": "p.your_token",
+    "devMode": False,
+})
+
+client.query("top_pages", {"limit": 5})
+client.ingest("events", {"event_name": "click"})
+
+client.datasources.append("events", {
+    "url": "https://example.com/events.csv"
+})
+
+client.datasources.delete("events", {
+    "deleteCondition": "event_name = 'test'",
+    "dryRun": True,
+})
+
+context = client.getContext()
 ```
 
-Notes:
-- The `Datasource` object does some in-memory buffering and uses the [events API](https://www.tinybird.co/docs/v2/get-data-in/events-api). 
-- It only supports `ndjson` data
-- It automatically handles [Rate Limits](https://www.tinybird.co/docs/get-started/plans/limits#ingestion-limits-api)
+### 3) Schema DSL + project client
 
-## Ingest using an API instance
+Use this to define datasources/pipes as code and expose a structured client.
 
 ```python
-
-from tb.a.api import AsyncAPI
-
-async with AsyncAPI(tinybird_token, api_url) as api:
-    await api.post('datasources',
-        params={
-            'name': 'datasource_name',
-            'mode': 'append',
-            'format': 'ndjson',
-            'url': 'https://storage.googleapis.com/davidm-wadus/events.ndjson',
-        }
-    )
-```
-
-- It automatically handles [Rate Limits](https://docs.tinybird.co/api-reference/api-reference.html#limits)
-- Works with any Tinybird API
-- The `post`, `get`, `send` methods signatures are equivalent to the [requests](https://docs.python-requests.org/en/latest/) library.
-
-## Logging from your Python module to a Tinybird Data Source
-
-```python
-import logging
-from tb.logger import TinybirdLoggingHandler
-from dotenv import load_dotenv
-
-load_dotenv()
-TB_API_URL = os.getenv("TINYBIRD_API_URL")
-TB_WRITE_TOKEN = os.getenv("TINYBIRD_WRITE_TOKEN")
-
-logger = logging.getLogger('your-logger-name')
-handler = TinybirdLoggingHandler(TB_API_URL, TB_WRITE_TOKEN, 'your-app-name')
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-handler.setFormatter(formatter)
-logger.addHandler(handler)
-```
-
-Each time you call the logger an event to the `tb_logs` DataSource in your Workspace is sent.
-
-To configure the DataSource name initialize the `TinybirdLogginHandler` like this:
-
-```python
-handler = TinybirdLoggingHandler(TB_API_URL, TB_WRITE_TOKEN, 'your-app-name', ds_name="your_tb_ds_name")
-```
-
-### Non-blocking logging
-
-If you want to avoid blocking the main thread you can use a queue to send the logs to a different thread.
-
-```python
-import logging
-from multiprocessing import Queue
-from tb.logger import TinybirdLoggingQueueHandler
-from dotenv import load_dotenv
-
-load_dotenv()
-TB_API_URL = os.getenv("TINYBIRD_API_URL")
-TB_WRITE_TOKEN = os.getenv("TINYBIRD_WRITE_TOKEN")
-
-logger = logging.getLogger('your-logger-name')
-handler = TinybirdLoggingQueueHandler(Queue(-1), TB_API_URL, TB_WRITE_TOKEN, 'your-app-name', ds_name="your_tb_ds_name")
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-handler.setFormatter(formatter)
-logger.addHandler(handler)
-```
-
-## Logging from Litellm to a Tinybird Data Source
-
-Install the `ai` extra:
-
-```
-pip install tinybird-python-sdk[ai]
-```
-
-Then use the following handler:
-
-```python
-import litellm
-from litellm import acompletion
-from tb.litellm.handler import TinybirdLitellmAsyncHandler
-
-customHandler = TinybirdLitellmAsyncHandler(
-    api_url="https://api.us-east.aws.tinybird.co", 
-    tinybird_token=os.getenv("TINYBIRD_TOKEN"), 
-    datasource_name="litellm"
+from tinybird_sdk import (
+    t,
+    p,
+    node,
+    engine,
+    defineDatasource,
+    defineEndpoint,
+    createTinybirdClient,
 )
 
-litellm.callbacks = [customHandler]
-
-response = await acompletion(
-    model="gpt-3.5-turbo", 
-    messages=[{"role": "user", "content": "Hi 👋 - i'm openai"}],
-    stream=True,
-    metadata={
-        "organization": "tinybird",
-        "environment": "dev",
-        "project": "litellm_test",
-        "chat_id": "1234567890",
+page_views = defineDatasource("page_views", {
+    "schema": {
+        "timestamp": t.dateTime(),
+        "pathname": t.string(),
+        "country": t.string().nullable().lowCardinality(),
     },
+    "engine": engine.mergeTree({
+        "sortingKey": ["pathname", "timestamp"],
+    }),
+})
+
+top_pages = defineEndpoint("top_pages", {
+    "params": {
+        "limit": p.int32().optional(10),
+    },
+    "nodes": [
+        node({
+            "name": "endpoint",
+            "sql": """
+                SELECT pathname, count() AS views
+                FROM page_views
+                GROUP BY pathname
+                ORDER BY views DESC
+                LIMIT {{Int32(limit, 10)}}
+            """,
+        })
+    ],
+    "output": {
+        "pathname": t.string(),
+        "views": t.uint64(),
+    },
+})
+
+tinybird = createTinybirdClient({
+    "datasources": {"page_views": page_views},
+    "pipes": {"top_pages": top_pages},
+})
+```
+
+## SDK API Shape
+
+### Top-level imports
+
+```python
+from tinybird_sdk import (
+    # Runtime clients
+    TinybirdClient,
+    createClient,
+    TinybirdApi,
+    createTinybirdApi,
+
+    # Schema DSL
+    t,
+    p,
+    engine,
+    defineDatasource,
+    definePipe,
+    defineEndpoint,
+    defineMaterializedView,
+    defineCopyPipe,
+    defineProject,
+    createTinybirdClient,
+    node,
+    sql,
+
+    # Tokens
+    createJWT,
 )
 ```
 
-Track custom metadata using the `metadata` dictionary.
+### Common runtime methods
 
-This is the schema for the `litellm` data source:
+`TinybirdApi`:
 
-```sql
-SCHEMA >
-    `model` LowCardinality(String) `json:$.model` DEFAULT 'unknown',
-    `messages` Array(Map(String, String)) `json:$.messages[:]` DEFAULT [],
-    `user` String `json:$.user` DEFAULT 'unknown',
-    `start_time` DateTime `json:$.start_time` DEFAULT now(),
-    `end_time` DateTime `json:$.end_time` DEFAULT now(),
-    `id` String `json:$.id` DEFAULT '',
-    `stream` Boolean `json:$.stream` DEFAULT false,
-    `call_type` LowCardinality(String) `json:$.call_type` DEFAULT 'unknown',
-    `provider` LowCardinality(String) `json:$.provider` DEFAULT 'unknown',
-    `api_key` String `json:$.api_key` DEFAULT '',
-    `log_event_type` LowCardinality(String) `json:$.log_event_type` DEFAULT 'unknown',
-    `llm_api_duration_ms` Float32 `json:$.llm_api_duration_ms` DEFAULT 0,
-    `cache_hit` Boolean `json:$.cache_hit` DEFAULT false,
-    `response_status` LowCardinality(String) `json:$.standard_logging_object_status` DEFAULT 'unknown',
-    `response_time` Float32 `json:$.standard_logging_object_response_time` DEFAULT 0,
-    `proxy_metadata` String `json:$.proxy_metadata` DEFAULT '',
-    `organization` String `json:$.proxy_metadata.organization` DEFAULT '',
-    `environment` String `json:$.proxy_metadata.environment` DEFAULT '',
-    `project` String `json:$.proxy_metadata.project` DEFAULT '',
-    `chat_id` String `json:$.proxy_metadata.chat_id` DEFAULT '',
-    `response` String `json:$.response` DEFAULT '',
-    `response_id` String `json:$.response.id`,
-    `response_object` String `json:$.response.object` DEFAULT 'unknown',
-    `response_choices` Array(String) `json:$.response.choices[:]` DEFAULT [],
-    `completion_tokens` UInt16 `json:$.response.usage.completion_tokens` DEFAULT 0,
-    `prompt_tokens` UInt16 `json:$.response.usage.prompt_tokens` DEFAULT 0,
-    `total_tokens` UInt16 `json:$.response.usage.total_tokens` DEFAULT 0,
-    `cost` Float32 `json:$.cost` DEFAULT 0,
-    `exception` String `json:$.exception` DEFAULT '',
-    `traceback` String `json:$.traceback` DEFAULT '',
-    `duration` Float32 `json:$.duration` DEFAULT 0
+- `query(endpointName, params=None, options=None)`
+- `ingest(datasourceName, event, options=None)`
+- `ingestBatch(datasourceName, events, options=None)`
+- `sql(sql, options=None)`
+- `appendDatasource(datasourceName, options, apiOptions=None)`
+- `deleteDatasource(datasourceName, options, apiOptions=None)`
+- `truncateDatasource(datasourceName, options=None, apiOptions=None)`
+- `createToken(body, options=None)`
 
+`TinybirdClient`:
 
-ENGINE MergeTree
-ENGINE_SORTING_KEY start_time, organization, project, model
-ENGINE_PARTITION_KEY toYYYYMM(start_time)
+- `query(pipeName, params=None, options=None)`
+- `ingest(datasourceName, event, options=None)`
+- `ingestBatch(datasourceName, events, options=None)`
+- `sql(sql, options=None)`
+- `getContext()`
+- `datasources.ingest/append/replace/delete/truncate(...)`
+- `tokens.createJWT(...)`
+
+## Generation and Build Workflows
+
+Generate Tinybird resource content from Python project definitions:
+
+```python
+from tinybird_sdk import defineProject, generateResources
+
+project = defineProject({
+    "datasources": {"page_views": page_views},
+    "pipes": {"top_pages": top_pages},
+})
+
+resources = generateResources(project)
+
+for ds in resources.datasources:
+    print(ds.name, ds.content)
 ```
+
+Build from a Python schema module file:
+
+```python
+from tinybird_sdk.generator import build
+
+result = build({
+    "schemaPath": "src/tinybird_schema.py",  # must export `project` or `tinybird_project`
+})
+
+print(result.stats)
+```
+
+Deploy generated resources using API layer helpers:
+
+```python
+from tinybird_sdk.api.build import buildToTinybird
+
+response = buildToTinybird(
+    {"baseUrl": "https://api.tinybird.co", "token": "p.your_token"},
+    resources,
+)
+```
+
+## Token and Preview Behavior
+
+Preview token resolution supports these environment conventions:
+
+- `TINYBIRD_BRANCH_TOKEN` (highest priority)
+- `TINYBIRD_TOKEN`
+- CI/preview branch env detection (`VERCEL_*`, `GITHUB_*`, `CI_*`, etc.)
+
+Helpers:
+
+- `isPreviewEnvironment()`
+- `getPreviewBranchName()`
+- `resolveToken(...)`
+- `clearTokenCache()`
+
+## Error Types
+
+Main SDK errors:
+
+- `TinybirdApiError`: HTTP/API-level errors from low-level wrapper
+- `TinybirdError`: high-level client errors
+- `TokenApiError`, `BranchApiError`, `WorkspaceApiError`, `ResourceApiError`, `RegionsApiError`, `LocalApiError`
+
+## Project Layout
+
+```text
+python/
+  src/tinybird_sdk/
+    api/
+    client/
+    schema/
+    generator/
+    codegen/
+    infer/
+    cli/
+  tests/
+```
+
+## Status
+
+This package is parity-oriented and actively evolving. API details may still be refined as more TS test contracts are ported.

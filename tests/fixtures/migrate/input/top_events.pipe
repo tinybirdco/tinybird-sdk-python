@@ -1,0 +1,7 @@
+TYPE endpoint
+DESCRIPTION >
+    Top events endpoint
+NODE endpoint
+SQL >
+    %
+    SELECT id AS id, country AS country FROM events
