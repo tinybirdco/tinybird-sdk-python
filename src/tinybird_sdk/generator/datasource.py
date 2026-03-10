@@ -58,7 +58,10 @@ def _generate_column_line(column_name: str, column: TypeValidator | ColumnDefini
         parts.append(f"`json:{effective_json_path}`")
 
     if validator._modifiers.has_default:
-        parts.append(f"DEFAULT {_format_default_value(validator._modifiers.default_value, tinybird_type)}")
+        if isinstance(validator._modifiers.default_expression, str):
+            parts.append(f"DEFAULT {validator._modifiers.default_expression}")
+        else:
+            parts.append(f"DEFAULT {_format_default_value(validator._modifiers.default_value, tinybird_type)}")
 
     if validator._modifiers.codec:
         parts.append(f"CODEC({validator._modifiers.codec})")

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from tinybird_sdk import define_datasource, define_kafka_connection, t
+from tinybird_sdk import define_datasource, define_kafka_connection, get_modifiers, t
 from tinybird_sdk.generator.connection import generate_connection
 from tinybird_sdk.generator.datasource import generate_datasource
 
@@ -80,3 +80,31 @@ def test_generate_datasource_ignores_non_string_json_path(monkeypatch: pytest.Mo
 
     generated = generate_datasource(datasource)
     assert "`json:$.id`" in generated.content
+
+
+def test_type_validator_default_expr_stores_expression() -> None:
+    validator = t.uuid().default_expr("  generateUUIDv4()  ")
+    modifiers = get_modifiers(validator)
+
+    assert modifiers.has_default is True
+    assert modifiers.default_expression == "generateUUIDv4()"
+    assert modifiers.default_value is None
+
+
+def test_generate_datasource_emits_unquoted_default_expression() -> None:
+    datasource = define_datasource(
+        "events",
+        {
+            "schema": {
+                "id": t.uuid().default_expr("generateUUIDv4()"),
+            }
+        },
+    )
+
+    generated = generate_datasource(datasource)
+    assert "id UUID `json:$.id` DEFAULT generateUUIDv4()" in generated.content
+
+
+def test_type_validator_default_expr_rejects_empty_expression() -> None:
+    with pytest.raises(ValueError, match="Default expression cannot be empty."):
+        t.uuid().default_expr("   ")

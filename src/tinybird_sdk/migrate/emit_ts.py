@@ -175,16 +175,19 @@ def _emit_datasource(ds: DatasourceModel) -> str:
         validator = _strict_column_type_to_validator(column.type)
 
         if column.default_expression is not None:
-            parsed_default = parse_literal_from_datafile(column.default_expression)
-            literal_value: Any = parsed_default
-            if isinstance(parsed_default, (int, float)) and _is_boolean_type(column.type):
-                if parsed_default in {0, 1}:
-                    literal_value = bool(parsed_default)
-                else:
-                    raise ValueError(
-                        f'Boolean default value must be 0 or 1 for column "{column.name}" in datasource "{ds.name}".'
-                    )
-            validator += f".default({repr(literal_value)})"
+            try:
+                parsed_default = parse_literal_from_datafile(column.default_expression)
+                literal_value: Any = parsed_default
+                if isinstance(parsed_default, (int, float)) and _is_boolean_type(column.type):
+                    if parsed_default in {0, 1}:
+                        literal_value = bool(parsed_default)
+                    else:
+                        raise ValueError(
+                            f'Boolean default value must be 0 or 1 for column "{column.name}" in datasource "{ds.name}".'
+                        )
+                validator += f".default({repr(literal_value)})"
+            except ValueError:
+                validator += f".default_expr({_escape_string(column.default_expression)})"
 
         if column.codec:
             validator += f".codec({_escape_string(column.codec)})"
