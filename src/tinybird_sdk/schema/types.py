@@ -12,6 +12,7 @@ class TypeModifiers:
     low_cardinality: bool = False
     has_default: bool = False
     default_value: Any = None
+    default_expression: str | None = None
     codec: str | None = None
 
 
@@ -53,7 +54,22 @@ class TypeValidator:
         return TypeValidator(
             _python_type=self._python_type,
             _tinybirdType=self._tinybirdType,
-            _modifiers=replace(self._modifiers, has_default=True, default_value=value),
+            _modifiers=replace(
+                self._modifiers, has_default=True, default_value=value, default_expression=None
+            ),
+        )
+
+    def default_expr(self, expression: str) -> "TypeValidator":
+        trimmed = expression.strip()
+        if not trimmed:
+            raise ValueError("Default expression cannot be empty.")
+
+        return TypeValidator(
+            _python_type=self._python_type,
+            _tinybirdType=self._tinybirdType,
+            _modifiers=replace(
+                self._modifiers, has_default=True, default_value=None, default_expression=trimmed
+            ),
         )
 
     def codec(self, codec: str) -> "TypeValidator":

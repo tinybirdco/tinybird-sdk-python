@@ -198,3 +198,33 @@ def test_run_migrate_rejects_sink_connection_type_mismatch(tmp_path: Path) -> No
 
     assert result.success is False
     assert any("is incompatible with connection" in error.message for error in result.errors)
+
+
+def test_run_migrate_emits_default_expr_for_sql_function_defaults(tmp_path: Path) -> None:
+    (tmp_path / "events.datasource").write_text(
+        "\n".join(
+            [
+                "SCHEMA >",
+                "    id UUID DEFAULT generateUUIDv4(),",
+                "    payload String DEFAULT '{}'",
+                "",
+                'ENGINE "MergeTree"',
+                'ENGINE_SORTING_KEY "id"',
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = run_migrate(
+        {
+            "cwd": str(tmp_path),
+            "patterns": ["*.datasource"],
+            "dry_run": True,
+        }
+    )
+
+    assert result.success is True
+    assert result.errors == []
+    assert result.output_content is not None
+    assert '\'id\': t.uuid().default_expr("generateUUIDv4()"),' in result.output_content
+    assert "'payload': t.string().default('{}')," in result.output_content
