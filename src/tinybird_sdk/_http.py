@@ -12,7 +12,7 @@ from urllib.error import HTTPError
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 from urllib.request import Request, urlopen
 
-TINYBIRD_FROM_PARAM = "ts-sdk"
+TINYBIRD_FROM_PARAM = "python-sdk"
 
 
 @dataclass(slots=True)

@@ -103,7 +103,7 @@ def browser_login(options: dict[str, str] | None = None) -> AuthResult:
     thread = Thread(target=serve, daemon=True)
     thread.start()
 
-    auth_url = f"{auth_host.rstrip('/')}/api/cli-login?{urlencode({'api_host': api_host, 'origin': 'ts-sdk'})}"
+    auth_url = f"{auth_host.rstrip('/')}/api/cli-login?{urlencode({'api_host': api_host, 'origin': 'python-sdk'})}"
     open_browser(auth_url)
 
     if not done.wait(timeout=SERVER_MAX_WAIT_TIME):
