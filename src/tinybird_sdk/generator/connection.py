@@ -34,7 +34,11 @@ def _generate_kafka_connection(connection: KafkaConnectionDefinition) -> str:
     if options.schema_registry_url:
         parts.append(f"KAFKA_SCHEMA_REGISTRY_URL {options.schema_registry_url}")
     if options.ssl_ca_pem:
-        parts.append(f"KAFKA_SSL_CA_PEM {options.ssl_ca_pem}")
+        if "\n" in options.ssl_ca_pem:
+            indented = "\n".join(f"    {line}" for line in options.ssl_ca_pem.split("\n"))
+            parts.append(f"KAFKA_SSL_CA_PEM >\n{indented}")
+        else:
+            parts.append(f"KAFKA_SSL_CA_PEM {options.ssl_ca_pem}")
 
     return "\n".join(parts)
 

@@ -44,6 +44,72 @@ def test_parse_connection_supports_single_quoted_type_and_schema_registry() -> N
     assert parsed.schema_registry_url == "https://registry.example.com"
 
 
+def test_parse_connection_supports_multiline_ssl_ca_pem() -> None:
+    parsed = parse_connection_file(
+        _resource(
+            "connection",
+            "broker",
+            "\n".join(
+                [
+                    "TYPE kafka",
+                    "KAFKA_BOOTSTRAP_SERVERS localhost:9092",
+                    "KAFKA_SECURITY_PROTOCOL SASL_SSL",
+                    "KAFKA_SSL_CA_PEM >",
+                    "    -----BEGIN CERTIFICATE-----",
+                    "    MIIDXTCCAkWgAwIBAgIJAM",
+                    "    -----END CERTIFICATE-----",
+                ]
+            ),
+        )
+    )
+
+    assert parsed.connection_type == "kafka"
+    assert parsed.ssl_ca_pem == "-----BEGIN CERTIFICATE-----\nMIIDXTCCAkWgAwIBAgIJAM\n-----END CERTIFICATE-----"
+
+
+def test_parse_connection_supports_multiline_ssl_ca_pem_with_following_directives() -> None:
+    parsed = parse_connection_file(
+        _resource(
+            "connection",
+            "broker",
+            "\n".join(
+                [
+                    "TYPE kafka",
+                    "KAFKA_BOOTSTRAP_SERVERS localhost:9092",
+                    "KAFKA_SSL_CA_PEM >",
+                    "    -----BEGIN CERTIFICATE-----",
+                    "    MIIDXTCCAkWgAwIBAgIJAM",
+                    "    -----END CERTIFICATE-----",
+                    "KAFKA_SECURITY_PROTOCOL SASL_SSL",
+                    "KAFKA_KEY mykey",
+                ]
+            ),
+        )
+    )
+
+    assert parsed.ssl_ca_pem == "-----BEGIN CERTIFICATE-----\nMIIDXTCCAkWgAwIBAgIJAM\n-----END CERTIFICATE-----"
+    assert parsed.security_protocol == "SASL_SSL"
+    assert parsed.key == "mykey"
+
+
+def test_parse_connection_supports_single_line_ssl_ca_pem() -> None:
+    parsed = parse_connection_file(
+        _resource(
+            "connection",
+            "broker",
+            "\n".join(
+                [
+                    "TYPE kafka",
+                    "KAFKA_BOOTSTRAP_SERVERS localhost:9092",
+                    "KAFKA_SSL_CA_PEM {{ tb_secret('KAFKA_SSL_CA_PEM') }}",
+                ]
+            ),
+        )
+    )
+
+    assert parsed.ssl_ca_pem == "{{ tb_secret('KAFKA_SSL_CA_PEM') }}"
+
+
 def test_parse_datasource_supports_engine_is_deleted_and_kafka_store_raw_value() -> None:
     parsed = parse_datasource_file(
         _resource(
