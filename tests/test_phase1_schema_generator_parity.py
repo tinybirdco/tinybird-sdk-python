@@ -20,6 +20,36 @@ def test_generate_connection_includes_kafka_schema_registry_url() -> None:
     assert "KAFKA_SCHEMA_REGISTRY_URL https://registry.example.com" in generated.content
 
 
+def test_generate_connection_emits_multiline_ssl_ca_pem() -> None:
+    pem = "-----BEGIN CERTIFICATE-----\nMIIDXTCCAkWgAwIBAgIJAM\n-----END CERTIFICATE-----"
+    kafka = define_kafka_connection(
+        "broker",
+        {
+            "bootstrap_servers": "localhost:9092",
+            "ssl_ca_pem": pem,
+        },
+    )
+
+    generated = generate_connection(kafka)
+    assert "KAFKA_SSL_CA_PEM >" in generated.content
+    assert "    -----BEGIN CERTIFICATE-----" in generated.content
+    assert "    MIIDXTCCAkWgAwIBAgIJAM" in generated.content
+    assert "    -----END CERTIFICATE-----" in generated.content
+
+
+def test_generate_connection_emits_single_line_ssl_ca_pem() -> None:
+    kafka = define_kafka_connection(
+        "broker",
+        {
+            "bootstrap_servers": "localhost:9092",
+            "ssl_ca_pem": "{{ tb_secret('KAFKA_SSL_CA_PEM') }}",
+        },
+    )
+
+    generated = generate_connection(kafka)
+    assert "KAFKA_SSL_CA_PEM {{ tb_secret('KAFKA_SSL_CA_PEM') }}" in generated.content
+
+
 def test_generate_datasource_includes_indexes_and_store_raw_value() -> None:
     kafka = define_kafka_connection("broker", {"bootstrap_servers": "localhost:9092"})
     datasource = define_datasource(

@@ -1,7 +1,30 @@
 from __future__ import annotations
 
-from .parser_utils import MigrationParseError, is_blank, parse_directive_line, parse_quoted_value, split_lines
+from .parser_utils import MigrationParseError, is_blank, parse_directive_line, parse_quoted_value, read_directive_block, split_lines
 from .types import ConnectionModel, GCSConnectionModel, KafkaConnectionModel, ResourceFile, S3ConnectionModel
+
+CONNECTION_DIRECTIVES = {
+    "TYPE",
+    "KAFKA_BOOTSTRAP_SERVERS",
+    "KAFKA_SECURITY_PROTOCOL",
+    "KAFKA_SASL_MECHANISM",
+    "KAFKA_KEY",
+    "KAFKA_SECRET",
+    "KAFKA_SCHEMA_REGISTRY_URL",
+    "KAFKA_SSL_CA_PEM",
+    "S3_REGION",
+    "S3_ARN",
+    "S3_ACCESS_KEY",
+    "S3_SECRET",
+    "GCS_SERVICE_ACCOUNT_CREDENTIALS_JSON",
+}
+
+
+def _is_connection_directive_line(line: str) -> bool:
+    if not line:
+        return False
+    directive = parse_directive_line(line)
+    return directive["key"] in CONNECTION_DIRECTIVES
 
 
 def parse_connection_file(resource: ResourceFile) -> ConnectionModel:
@@ -22,9 +45,19 @@ def parse_connection_file(resource: ResourceFile) -> ConnectionModel:
     access_secret: str | None = None
     service_account_credentials_json: str | None = None
 
-    for raw_line in lines:
+    i = 0
+    while i < len(lines):
+        raw_line = lines[i]
         line = raw_line.strip()
+
         if is_blank(line) or line.startswith("#"):
+            i += 1
+            continue
+
+        if line == "KAFKA_SSL_CA_PEM >":
+            block, next_index = read_directive_block(lines, i + 1, _is_connection_directive_line)
+            ssl_ca_pem = "\n".join(block)
+            i = next_index
             continue
 
         directive = parse_directive_line(line)
@@ -80,6 +113,8 @@ def parse_connection_file(resource: ResourceFile) -> ConnectionModel:
                 resource.name,
                 f'Unsupported connection directive in strict mode: "{line}"',
             )
+
+        i += 1
 
     if not connection_type:
         raise MigrationParseError(resource.file_path, "connection", resource.name, "TYPE directive is required.")
