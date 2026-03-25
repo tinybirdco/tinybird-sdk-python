@@ -9,7 +9,7 @@ from typing import Any
 from ..config import find_existing_config_path
 
 
-RESOURCES_TEMPLATE = '''from tinybird_sdk import Tinybird, define_datasource, define_endpoint, engine, node, p, t
+RESOURCES_TEMPLATE = '''from tinybird_sdk import define_datasource, define_endpoint, engine, node, p, t
 
 
 # --- Datasources ---
@@ -56,14 +56,64 @@ top_pages = define_endpoint("top_pages", {
         "views": t.uint64(),
     },
 })
+'''
 
 
-# --- Client ---
+def _client_template(resources_import_path: str) -> str:
+    return f'''import os
 
-tinybird = Tinybird({
-    "datasources": {"page_views": page_views},
-    "pipes": {"top_pages": top_pages},
-})
+from tinybird_sdk import Tinybird
+from {resources_import_path} import page_views, top_pages
+
+tinybird = Tinybird(
+    {{
+        "datasources": {{"page_views": page_views}},
+        "pipes": {{"top_pages": top_pages}},
+        "base_url": os.getenv("TINYBIRD_API_URL", "https://api.tinybird.co"),
+        "token": os.getenv("TINYBIRD_TOKEN"),
+    }}
+)
+'''
+
+
+def _main_template(client_import_path: str) -> str:
+    return f'''from datetime import datetime, timezone
+
+from dotenv import load_dotenv
+
+
+def main():
+    load_dotenv(".env.local")
+
+    from {client_import_path} import tinybird
+
+    now = datetime.now(timezone.utc).isoformat(timespec="milliseconds")
+
+    # Ingest data using the Events API
+    tinybird.page_views.ingest(
+        {{
+            "timestamp": now,
+            "session_id": "abc123",
+            "pathname": "/home",
+            "referrer": "https://google.com",
+        }}
+    )
+
+    # Query the endpoint
+    result = tinybird.top_pages.query(
+        {{
+            "start_date": "2026-01-01 00:00:00",
+            "end_date": now,
+            "limit": 5,
+        }}
+    )
+
+    for row in result["data"]:
+        print(row["pathname"], row["views"])
+
+
+if __name__ == "__main__":
+    main()
 '''
 
 
@@ -133,7 +183,17 @@ def run_init(options: InitOptions | dict[str, Any] | None = None) -> InitResult:
             folder = (src / "lib") if src.is_dir() else (cwd / "lib")
 
         resources_path = folder / "tinybird_resources.py"
+        client_path = folder / "client.py"
+        main_path = cwd / "main.py"
+
+        # Compute import paths based on folder relative to cwd
+        relative_folder = str(folder.relative_to(cwd)).replace(os.sep, ".")
+        resources_import = f"{relative_folder}.tinybird_resources"
+        client_import = f"{relative_folder}.client"
+
         _write_file(resources_path, RESOURCES_TEMPLATE, normalized.force)
+        _write_file(client_path, _client_template(resources_import), normalized.force)
+        _write_file(main_path, _main_template(client_import), normalized.force)
 
         # 3. Add the resources file to tinybird.config.json include list
         config_path = find_existing_config_path(str(cwd))
