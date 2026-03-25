@@ -48,8 +48,6 @@ def create_cli() -> argparse.ArgumentParser:
     init_cmd = sub.add_parser("init", help="Initialize a new Tinybird project with Python SDK templates")
     init_cmd.add_argument("--folder", help="Target folder for generated Python files")
     init_cmd.add_argument("--force", action="store_true", help="Overwrite existing files")
-    init_cmd.add_argument("--skip-login", action="store_true", help="Skip the login step")
-    init_cmd.add_argument("--dev-mode", choices=["branch", "local"], help="Development mode")
 
     generate_cmd = sub.add_parser("generate", help="Generate Tinybird datafiles from Python definitions")
     generate_cmd.add_argument("--json", action="store_true")
@@ -86,20 +84,13 @@ def main(argv: list[str] | None = None) -> int:
         result = run_init({
             "folder": args.folder,
             "force": args.force,
-            "skip_login": args.skip_login,
-            "dev_mode": args.dev_mode,
         })
         if not result.success:
             output.error(result.error or "Init failed")
             return 1
 
-        output.success("✓ Project initialized!")
-        if result.client_path:
-            output.info(f"  Client: {result.client_path}")
-        if result.existing_datafiles:
-            output.info(f"  Found {len(result.existing_datafiles)} existing datafile(s)")
-        if result.logged_in:
-            output.info(f"  Logged in as {result.user_email} ({result.workspace_name})")
+        if result.resources_path:
+            output.success(f"\n✓ Python SDK resources created: {result.resources_path}")
         return 0
 
     if args.command == "generate":

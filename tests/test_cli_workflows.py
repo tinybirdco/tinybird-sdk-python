@@ -15,8 +15,20 @@ from tinybird_sdk.cli.commands.pull import run_pull
 
 
 def test_init_build_and_deploy_workflow(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    init_result = run_init({"cwd": str(tmp_path), "skip_login": True})
+    monkeypatch.setattr(
+        "tinybird_sdk.cli.commands.init._run_tinybird_cli_init",
+        lambda _argv: 0,
+    )
+    init_result = run_init({"cwd": str(tmp_path)})
     assert init_result.success is True
+    assert init_result.resources_path is not None
+    assert (tmp_path / init_result.resources_path).exists()
+
+    # Create config that the tinybird CLI would have created
+    (tmp_path / "tinybird.config.json").write_text(
+        f'{{"include":["{init_result.resources_path}"],"token":"${{TINYBIRD_TOKEN}}","base_url":"${{TINYBIRD_URL}}"}}\n',
+        encoding="utf-8",
+    )
 
     monkeypatch.setenv("TINYBIRD_TOKEN", "p.workspace")
     monkeypatch.setenv("TINYBIRD_URL", "https://api.tinybird.co")
