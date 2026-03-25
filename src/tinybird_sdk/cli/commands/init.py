@@ -175,12 +175,24 @@ def run_init(options: InitOptions | dict[str, Any] | None = None) -> InitResult:
             cli_argv.extend(["--folder", normalized.folder])
         _run_tinybird_cli_init(cli_argv)
 
-        # 2. Create Python SDK template files on top
+        # 2. Determine the target folder for SDK template files
+        #    Priority: --folder flag > folder from tinybird.config.json > default
+        folder: Path | None = None
         if normalized.folder:
             folder = Path(normalized.folder)
             if not folder.is_absolute():
                 folder = cwd / folder
         else:
+            # Read the folder the tinybird CLI configured (from the interactive prompt)
+            config_path_check = find_existing_config_path(str(cwd))
+            if config_path_check and config_path_check.endswith(".json"):
+                with open(config_path_check, "r", encoding="utf-8") as fp:
+                    cli_config = json.load(fp)
+                include = cli_config.get("include", [])
+                if include:
+                    folder = cwd / Path(include[0])
+
+        if folder is None:
             src = cwd / "src"
             folder = (src / "lib") if src.is_dir() else (cwd / "lib")
 
