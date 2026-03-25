@@ -74,6 +74,7 @@ tinybird = Tinybird({
 @dataclass(frozen=True, slots=True)
 class InitOptions:
     cwd: str | None = None
+    folder: str | None = None
     force: bool = False
     skip_login: bool = False
     dev_mode: str | None = None
@@ -112,9 +113,18 @@ def run_init(options: InitOptions | dict[str, Any] | None = None) -> InitResult:
 
     try:
         config_path = Path(get_config_path(str(cwd)))
-        datasources_path = Path(get_datasources_path(str(cwd)))
-        pipes_path = Path(get_pipes_path(str(cwd)))
-        client_path = Path(normalized.client_path) if normalized.client_path else Path(get_client_path(str(cwd)))
+
+        if normalized.folder:
+            folder = Path(normalized.folder)
+            if not folder.is_absolute():
+                folder = cwd / folder
+            datasources_path = folder / "datasources.py"
+            pipes_path = folder / "pipes.py"
+            client_path = folder / "client.py"
+        else:
+            datasources_path = Path(get_datasources_path(str(cwd)))
+            pipes_path = Path(get_pipes_path(str(cwd)))
+            client_path = Path(normalized.client_path) if normalized.client_path else Path(get_client_path(str(cwd)))
         if not client_path.is_absolute():
             client_path = cwd / client_path
 

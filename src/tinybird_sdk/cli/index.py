@@ -6,6 +6,7 @@ import json
 import sys
 
 from .commands.generate import run_generate
+from .commands.init import run_init
 from .commands.migrate import run_migrate
 from .output import output
 
@@ -41,8 +42,14 @@ def _run_installed_tinybird_cli(argv: list[str]) -> int:
 
 
 def create_cli() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="tinybird", description="Tinybird Python SDK generate command")
+    parser = argparse.ArgumentParser(prog="tinybird", description="Tinybird Python SDK CLI")
     sub = parser.add_subparsers(dest="command", required=True)
+
+    init_cmd = sub.add_parser("init", help="Initialize a new Tinybird project with Python SDK templates")
+    init_cmd.add_argument("--folder", help="Target folder for generated Python files")
+    init_cmd.add_argument("--force", action="store_true", help="Overwrite existing files")
+    init_cmd.add_argument("--skip-login", action="store_true", help="Skip the login step")
+    init_cmd.add_argument("--dev-mode", choices=["branch", "local"], help="Development mode")
 
     generate_cmd = sub.add_parser("generate", help="Generate Tinybird datafiles from Python definitions")
     generate_cmd.add_argument("--json", action="store_true")
@@ -69,11 +76,31 @@ def main(argv: list[str] | None = None) -> int:
     normalized_argv = list(argv) if argv is not None else list(sys.argv[1:])
 
     # SDK-owned commands stay local; all other commands are delegated to Tinybird CLI.
-    if not normalized_argv or normalized_argv[0] not in {"generate", "migrate"}:
+    if not normalized_argv or normalized_argv[0] not in {"init", "generate", "migrate"}:
         return _run_installed_tinybird_cli(normalized_argv)
 
     parser = create_cli()
     args = parser.parse_args(normalized_argv)
+
+    if args.command == "init":
+        result = run_init({
+            "folder": args.folder,
+            "force": args.force,
+            "skip_login": args.skip_login,
+            "dev_mode": args.dev_mode,
+        })
+        if not result.success:
+            output.error(result.error or "Init failed")
+            return 1
+
+        output.success("✓ Project initialized!")
+        if result.client_path:
+            output.info(f"  Client: {result.client_path}")
+        if result.existing_datafiles:
+            output.info(f"  Found {len(result.existing_datafiles)} existing datafile(s)")
+        if result.logged_in:
+            output.info(f"  Logged in as {result.user_email} ({result.workspace_name})")
+        return 0
 
     if args.command == "generate":
         result = run_generate({"output_dir": args.output_dir})
