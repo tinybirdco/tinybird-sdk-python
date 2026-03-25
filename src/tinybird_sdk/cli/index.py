@@ -89,8 +89,13 @@ def main(argv: list[str] | None = None) -> int:
             output.error(result.error or "Init failed")
             return 1
 
+        output.success("\n✓ Python SDK files created:")
         if result.resources_path:
-            output.success(f"\n✓ Python SDK resources created: {result.resources_path}")
+            output.info(f"  {result.resources_path}")
+        if result.client_path:
+            output.info(f"  {result.client_path}")
+        if result.main_path:
+            output.info(f"  {result.main_path}")
         return 0
 
     if args.command == "generate":

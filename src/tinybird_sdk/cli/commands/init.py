@@ -128,6 +128,8 @@ class InitOptions:
 class InitResult:
     success: bool
     resources_path: str | None = None
+    client_path: str | None = None
+    main_path: str | None = None
     error: str | None = None
 
 
@@ -193,7 +195,8 @@ def run_init(options: InitOptions | dict[str, Any] | None = None) -> InitResult:
 
         _write_file(resources_path, RESOURCES_TEMPLATE, normalized.force)
         _write_file(client_path, _client_template(resources_import), normalized.force)
-        _write_file(main_path, _main_template(client_import), normalized.force)
+        # Always overwrite main.py — the default from `uv init` is a placeholder
+        _write_file(main_path, _main_template(client_import), force=True)
 
         # 3. Add the resources file to tinybird.config.json include list
         config_path = find_existing_config_path(str(cwd))
@@ -212,6 +215,8 @@ def run_init(options: InitOptions | dict[str, Any] | None = None) -> InitResult:
         return InitResult(
             success=True,
             resources_path=str(resources_path.relative_to(cwd)),
+            client_path=str(client_path.relative_to(cwd)),
+            main_path=str(main_path.relative_to(cwd)),
         )
     except Exception as error:
         return InitResult(success=False, error=str(error))
