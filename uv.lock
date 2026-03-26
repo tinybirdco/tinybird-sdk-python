@@ -898,7 +898,7 @@ wheels = [
 
 [[package]]
 name = "tinybird"
-version = "4.0.0"
+version = "4.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiofiles" },
@@ -929,14 +929,14 @@ dependencies = [
     { name = "watchdog" },
     { name = "wheel" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f7/69/26c6ea4f5c42c6db13e92e4c641188db31abec2175c41ae7f6da6c6c40bc/tinybird-4.0.0.tar.gz", hash = "sha256:18be073f6a2130b0452fa178fd71b92034bab33b6615c622438238ab6b795493", size = 439557, upload-time = "2026-03-09T11:25:27.293Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/56/16/4c6fde589d416798a7f7f07f011a9f52871bd183a6726d7272e1bc0ef112/tinybird-4.3.1.tar.gz", hash = "sha256:239f98a4bdd361ff4fa41f65144405c1fc906a53f68f75170a8c1d0235f0253f", size = 446967, upload-time = "2026-03-20T14:04:36.08Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/02/b0/4f18a912db90b1c4ebc7e0028a2dbdf937c77e2009d530f23da00767acb8/tinybird-4.0.0-py3-none-any.whl", hash = "sha256:d6c75864fda3b27543b4f4b8a7a8e98a7655b6d7867d675b75eb2f2335996f86", size = 427112, upload-time = "2026-03-09T11:25:24.207Z" },
+    { url = "https://files.pythonhosted.org/packages/f7/8d/fe32be3e9a96865e3b46f401c8bc620df885a6da226e037565548d8a01db/tinybird-4.3.1-py3-none-any.whl", hash = "sha256:9ef23e3ecdec1ef78b4613306e40f4f31ea59e8547572fd24aafc71655534cae", size = 434615, upload-time = "2026-03-20T14:04:33.954Z" },
 ]
 
 [[package]]
 name = "tinybird-sdk"
-version = "0.1.4"
+version = "0.1.5"
 source = { editable = "." }
 dependencies = [
     { name = "tinybird" },
@@ -948,7 +948,7 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "tinybird" }]
+requires-dist = [{ name = "tinybird", specifier = "==4.3.1" }]
 
 [package.metadata.requires-dev]
 dev = [{ name = "pytest", specifier = ">=9.0.2" }]
