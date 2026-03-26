@@ -6,13 +6,13 @@ import os
 from pathlib import Path
 from typing import Any
 
-from ..config import get_client_path, get_config_path, get_datasources_path, get_pipes_path
-from ..utils.package_manager import detect_package_manager_run_cmd
-from .login import run_login
+from ..config import find_existing_config_path
 
 
-DATASOURCES_TEMPLATE = '''from tinybird_sdk import define_datasource, t, engine
+RESOURCES_TEMPLATE = '''from tinybird_sdk import define_datasource, define_endpoint, engine, node, p, t
 
+
+# --- Datasources ---
 
 page_views = define_datasource("page_views", {
     "description": "Page view tracking data",
@@ -26,10 +26,9 @@ page_views = define_datasource("page_views", {
         "sorting_key": ["pathname", "timestamp"],
     }),
 })
-'''
 
-PIPES_TEMPLATE = '''from tinybird_sdk import define_endpoint, node, t, p
 
+# --- Endpoints ---
 
 top_pages = define_endpoint("top_pages", {
     "description": "Get the most visited pages",
@@ -59,35 +58,78 @@ top_pages = define_endpoint("top_pages", {
 })
 '''
 
-CLIENT_TEMPLATE = '''from tinybird_sdk import Tinybird
-from .datasources import page_views
-from .pipes import top_pages
+
+def _client_template(resources_import_path: str) -> str:
+    return f'''import os
+
+from tinybird_sdk import Tinybird
+from {resources_import_path} import page_views, top_pages
+
+tinybird = Tinybird(
+    {{
+        "datasources": {{"page_views": page_views}},
+        "pipes": {{"top_pages": top_pages}},
+        "base_url": os.getenv("TINYBIRD_API_URL", "https://api.tinybird.co"),
+        "token": os.getenv("TINYBIRD_TOKEN"),
+    }}
+)
+'''
 
 
-tinybird = Tinybird({
-    "datasources": {"page_views": page_views},
-    "pipes": {"top_pages": top_pages},
-})
+def _main_template(client_import_path: str) -> str:
+    return f'''from datetime import datetime, timezone
+
+from dotenv import load_dotenv
+
+
+def main():
+    load_dotenv(".env.local")
+
+    from {client_import_path} import tinybird
+
+    now = datetime.now(timezone.utc).isoformat(timespec="milliseconds")
+
+    # Ingest data using the Events API
+    tinybird.page_views.ingest(
+        {{
+            "timestamp": now,
+            "session_id": "abc123",
+            "pathname": "/home",
+            "referrer": "https://google.com",
+        }}
+    )
+
+    # Query the endpoint
+    result = tinybird.top_pages.query(
+        {{
+            "start_date": "2026-01-01 00:00:00",
+            "end_date": now,
+            "limit": 5,
+        }}
+    )
+
+    for row in result["data"]:
+        print(row["pathname"], row["views"])
+
+
+if __name__ == "__main__":
+    main()
 '''
 
 
 @dataclass(frozen=True, slots=True)
 class InitOptions:
     cwd: str | None = None
+    folder: str | None = None
     force: bool = False
-    skip_login: bool = False
-    dev_mode: str | None = None
-    client_path: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
 class InitResult:
     success: bool
+    resources_path: str | None = None
     client_path: str | None = None
-    logged_in: bool | None = None
-    workspace_name: str | None = None
-    user_email: str | None = None
-    existing_datafiles: list[str] | None = None
+    main_path: str | None = None
     error: str | None = None
 
 
@@ -106,46 +148,87 @@ def _write_file(path: Path, content: str, force: bool) -> None:
     path.write_text(content, encoding="utf-8")
 
 
+def _run_tinybird_cli_init(argv: list[str]) -> int:
+    try:
+        from tinybird.tb.cli import cli as upstream_cli  # type: ignore[import-not-found]
+    except ModuleNotFoundError:
+        return 1
+
+    try:
+        upstream_cli.main(args=argv, prog_name="tinybird")
+        return 0
+    except SystemExit as error:
+        code = error.code
+        if code is None:
+            return 0
+        return code if isinstance(code, int) else 1
+
+
 def run_init(options: InitOptions | dict[str, Any] | None = None) -> InitResult:
     normalized = options if isinstance(options, InitOptions) else InitOptions(**(options or {}))
     cwd = Path(normalized.cwd or os.getcwd()).resolve()
 
     try:
-        config_path = Path(get_config_path(str(cwd)))
-        datasources_path = Path(get_datasources_path(str(cwd)))
-        pipes_path = Path(get_pipes_path(str(cwd)))
-        client_path = Path(normalized.client_path) if normalized.client_path else Path(get_client_path(str(cwd)))
-        if not client_path.is_absolute():
-            client_path = cwd / client_path
+        # 1. Delegate to tinybird CLI for interactive flow (dev mode, CI/CD, skills, login)
+        cli_argv = ["init", "--type", "python"]
+        if normalized.folder:
+            cli_argv.extend(["--folder", normalized.folder])
+        _run_tinybird_cli_init(cli_argv)
 
-        existing_datafiles = find_existing_datafiles(str(cwd))
+        # 2. Determine the target folder for SDK template files
+        #    Priority: --folder flag > folder from tinybird.config.json > default
+        folder: Path | None = None
+        if normalized.folder:
+            folder = Path(normalized.folder)
+            if not folder.is_absolute():
+                folder = cwd / folder
+        else:
+            # Read the folder the tinybird CLI configured (from the interactive prompt)
+            config_path_check = find_existing_config_path(str(cwd))
+            if config_path_check and config_path_check.endswith(".json"):
+                with open(config_path_check, "r", encoding="utf-8") as fp:
+                    cli_config = json.load(fp)
+                include = cli_config.get("include", [])
+                if include:
+                    folder = cwd / Path(include[0])
 
-        include = [str(datasources_path.relative_to(cwd)), str(pipes_path.relative_to(cwd))]
-        include.extend(existing_datafiles)
+        if folder is None:
+            src = cwd / "src"
+            folder = (src / "lib") if src.is_dir() else (cwd / "lib")
 
-        config_payload = {
-            "include": include,
-            "token": "${TINYBIRD_TOKEN}",
-            "base_url": "${TINYBIRD_URL}",
-            "dev_mode": normalized.dev_mode or "branch",
-        }
+        resources_path = folder / "tinybird_resources.py"
+        client_path = folder / "client.py"
+        main_path = cwd / "main.py"
 
-        _write_file(config_path, json.dumps(config_payload, indent=2) + "\n", normalized.force)
-        _write_file(datasources_path, DATASOURCES_TEMPLATE, normalized.force)
-        _write_file(pipes_path, PIPES_TEMPLATE, normalized.force)
-        _write_file(client_path, CLIENT_TEMPLATE, normalized.force)
+        # Compute import paths based on folder relative to cwd
+        relative_folder = str(folder.relative_to(cwd)).replace(os.sep, ".")
+        resources_import = f"{relative_folder}.tinybird_resources"
+        client_import = f"{relative_folder}.client"
 
-        login_result = None
-        if not normalized.skip_login:
-            login_result = run_login({"cwd": str(cwd)})
+        _write_file(resources_path, RESOURCES_TEMPLATE, normalized.force)
+        _write_file(client_path, _client_template(resources_import), normalized.force)
+        # Always overwrite main.py — the default from `uv init` is a placeholder
+        _write_file(main_path, _main_template(client_import), force=True)
+
+        # 3. Add the resources file to tinybird.config.json include list
+        config_path = find_existing_config_path(str(cwd))
+        if config_path and config_path.endswith(".json"):
+            relative_resources = str(resources_path.relative_to(cwd))
+            with open(config_path, "r", encoding="utf-8") as fp:
+                config_data = json.load(fp)
+            include = config_data.get("include", [])
+            if relative_resources not in include:
+                include.append(relative_resources)
+                config_data["include"] = include
+                with open(config_path, "w", encoding="utf-8") as fp:
+                    json.dump(config_data, fp, indent=2)
+                    fp.write("\n")
 
         return InitResult(
             success=True,
+            resources_path=str(resources_path.relative_to(cwd)),
             client_path=str(client_path.relative_to(cwd)),
-            logged_in=login_result.success if login_result else False,
-            workspace_name=login_result.workspace_name if login_result else None,
-            user_email=login_result.user_email if login_result else None,
-            existing_datafiles=existing_datafiles,
+            main_path=str(main_path.relative_to(cwd)),
         )
     except Exception as error:
         return InitResult(success=False, error=str(error))
