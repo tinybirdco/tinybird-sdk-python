@@ -13,6 +13,7 @@ from .fetcher import (
 )
 from .branches import (
     TinybirdBranch,
+    CreateBranchOptions,
     BranchApiConfig,
     BranchApiError,
     create_branch,
