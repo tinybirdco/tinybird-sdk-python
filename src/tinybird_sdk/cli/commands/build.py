@@ -5,7 +5,7 @@ import os
 import time
 from typing import Any
 
-from ...api.branches import get_or_create_branch
+from ...api.branches import CreateBranchOptions, get_or_create_branch
 from ...api.build import build_to_tinybird
 from ...api.dashboard import get_branch_dashboard_url, get_local_dashboard_url
 from ...api.local import LocalNotRunningError, get_local_tokens, get_local_workspace_name, get_or_create_local_workspace
@@ -119,9 +119,17 @@ def run_build(options: BuildCommandOptions | dict[str, Any] | None = None) -> Bu
 
         if not normalized.token_override:
             try:
+                branch_options = None
+                branch_value = config.get("branch_data_on_create")
+                if branch_value and config.get("dev_mode") != "local":
+                    branch_options = CreateBranchOptions(
+                        last_partition=(branch_value == "last_partition"),
+                        all_partitions=(branch_value == "all_partitions"),
+                    )
                 branch = get_or_create_branch(
                     {"base_url": config["base_url"], "token": config["token"]},
                     config["tinybird_branch"],
+                    options=branch_options,
                 )
                 if not branch.get("token"):
                     return BuildCommandResult(

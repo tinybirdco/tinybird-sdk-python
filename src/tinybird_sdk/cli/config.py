@@ -8,7 +8,12 @@ from pathlib import Path
 from typing import Any
 
 from .config_loader import load_config_file
-from .config_types import DevMode, TinybirdConfig
+from .config_types import (
+    BRANCH_DATA_ON_CREATE_VALUES,
+    BranchDataOnCreateMode,
+    DevMode,
+    TinybirdConfig,
+)
 from .git import get_current_git_branch, get_tinybird_branch_name, is_main_branch
 
 DEFAULT_BASE_URL = "https://api.tinybird.co"
@@ -34,6 +39,26 @@ class ResolvedConfig:
     tinybird_branch: str | None
     is_main_branch: bool
     dev_mode: DevMode
+    branch_data_on_create: str | None
+
+
+def _resolve_branch_data_on_create(raw: dict[str, Any]) -> str | None:
+    value = raw.get("branch_data_on_create")
+    if value is None:
+        return BranchDataOnCreateMode.LAST_PARTITION.value
+    if not isinstance(value, str):
+        raise ValueError("branch_data_on_create must be a string.")
+
+    mode = value.strip().lower()
+    if not mode:
+        return BranchDataOnCreateMode.LAST_PARTITION.value
+    if mode not in BRANCH_DATA_ON_CREATE_VALUES:
+        raise ValueError(
+            f"Invalid branch_data_on_create '{value}'. Allowed values are: {', '.join(BRANCH_DATA_ON_CREATE_VALUES)}."
+        )
+    if mode == BranchDataOnCreateMode.ALL_PARTITIONS.value:
+        raise ValueError("branch_data_on_create 'all_partitions' is currently disabled.")
+    return mode
 
 
 def load_env_files(directory: str) -> None:
@@ -172,6 +197,14 @@ def _resolve_config(config: TinybirdConfig, config_path: str) -> ResolvedConfig:
         or DEFAULT_BASE_URL
     )
 
+    branch_data_on_create = _resolve_branch_data_on_create(asdict(config))
+    dev_mode = config.dev_mode or "branch"
+    if branch_data_on_create and dev_mode == "local":
+        print(
+            "Warning: branch_data_on_create is set in tinybird.config.json but dev_mode='local'. "
+            "Branch data settings only apply to cloud branches."
+        )
+
     return ResolvedConfig(
         include=include,
         token=token,
@@ -181,7 +214,8 @@ def _resolve_config(config: TinybirdConfig, config_path: str) -> ResolvedConfig:
         git_branch=get_current_git_branch(),
         tinybird_branch=get_tinybird_branch_name(),
         is_main_branch=is_main_branch(),
-        dev_mode=config.dev_mode or "branch",
+        dev_mode=dev_mode,
+        branch_data_on_create=branch_data_on_create,
     )
 
 
