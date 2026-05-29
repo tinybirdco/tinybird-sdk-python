@@ -86,6 +86,12 @@ def _generate_engine_config(engine: EngineConfig | None) -> str:
     return get_engine_clause(engine)
 
 
+def _generate_backfill(backfill: str | None) -> str | None:
+    if backfill == "skip":
+        return "BACKFILL skip"
+    return None
+
+
 def _generate_kafka_config(kafka: Any) -> str:
     lines = [
         f"KAFKA_CONNECTION_NAME {kafka.connection._name}",
@@ -163,6 +169,10 @@ def generate_datasource(datasource: DatasourceDefinition) -> GeneratedDatasource
     parts.append(_generate_schema(datasource._schema, include_json_paths))
     parts.append("")
     parts.append(_generate_engine_config(datasource.options.engine))
+
+    backfill = _generate_backfill(datasource.options.backfill)
+    if backfill:
+        parts.append(backfill)
 
     indexes = _generate_indexes(datasource.options.indexes)
     if indexes:

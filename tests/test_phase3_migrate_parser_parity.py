@@ -162,6 +162,43 @@ def test_parse_datasource_supports_import_directives() -> None:
     assert parsed.s3.from_timestamp == "2025-01-01 00:00:00"
 
 
+def test_parse_datasource_supports_backfill_skip() -> None:
+    parsed = parse_datasource_file(
+        _resource(
+            "datasource",
+            "daily_page_visits",
+            "\n".join(
+                [
+                    "SCHEMA >",
+                    "    date Date",
+                    "    page_url String",
+                    "    visits UInt64",
+                    "BACKFILL skip",
+                ]
+            ),
+        )
+    )
+
+    assert parsed.backfill == "skip"
+
+
+def test_parse_datasource_rejects_unsupported_backfill_value() -> None:
+    with pytest.raises(MigrationParseError, match="Invalid BACKFILL value"):
+        parse_datasource_file(
+            _resource(
+                "datasource",
+                "events",
+                "\n".join(
+                    [
+                        "SCHEMA >",
+                        "    id Int64",
+                        "BACKFILL run",
+                    ]
+                ),
+            )
+        )
+
+
 def test_parse_pipe_supports_param_options_and_placeholder_normalization() -> None:
     parsed = parse_pipe_file(
         _resource(
