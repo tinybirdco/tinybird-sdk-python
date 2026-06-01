@@ -202,6 +202,9 @@ def _emit_datasource(ds: DatasourceModel) -> str:
     if ds.engine:
         lines.append(f"    'engine': {_emit_engine_options(ds.engine)},")
 
+    if ds.backfill:
+        lines.append(f"    'backfill': {_escape_string(ds.backfill)},")
+
     if ds.indexes:
         lines.append("    'indexes': [")
         for index in ds.indexes:

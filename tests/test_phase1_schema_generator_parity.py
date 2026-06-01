@@ -80,6 +80,28 @@ def test_generate_datasource_includes_indexes_and_store_raw_value() -> None:
     assert "KAFKA_STORE_RAW_VALUE True" in generated.content
 
 
+def test_generate_datasource_includes_backfill_skip() -> None:
+    datasource = define_datasource(
+        "daily_page_visits",
+        {
+            "schema": {
+                "date": t.date(),
+                "page_url": t.string(),
+                "visits": t.uint64(),
+            },
+            "backfill": "skip",
+        },
+    )
+
+    generated = generate_datasource(datasource)
+    assert "BACKFILL skip" in generated.content
+
+
+def test_define_datasource_rejects_unsupported_backfill_value() -> None:
+    with pytest.raises(ValueError, match="Invalid datasource backfill value"):
+        define_datasource("events", {"schema": {"id": t.int32()}, "backfill": "run"})
+
+
 def test_define_datasource_validates_index_name_and_granularity() -> None:
     with pytest.raises(ValueError, match="Invalid datasource index name"):
         define_datasource(

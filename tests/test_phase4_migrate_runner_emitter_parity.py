@@ -39,6 +39,7 @@ def test_emit_migration_includes_phase4_connection_and_datasource_fields() -> No
             ver="version",
             is_deleted="is_deleted",
         ),
+        backfill="skip",
         indexes=[
             DatasourceIndexModel(
                 name="idx_id",
@@ -58,6 +59,7 @@ def test_emit_migration_includes_phase4_connection_and_datasource_fields() -> No
 
     assert "'schema_registry_url': \"https://registry.example.com\"" in emitted
     assert "'is_deleted': \"is_deleted\"" in emitted
+    assert "'backfill': \"skip\"" in emitted
     assert "'indexes': [" in emitted
     assert "'store_raw_value': True" in emitted
 
@@ -228,3 +230,31 @@ def test_run_migrate_emits_default_expr_for_sql_function_defaults(tmp_path: Path
     assert result.output_content is not None
     assert '\'id\': t.uuid().default_expr("generateUUIDv4()"),' in result.output_content
     assert "'payload': t.string().default('{}')," in result.output_content
+
+
+def test_run_migrate_emits_backfill_skip(tmp_path: Path) -> None:
+    (tmp_path / "daily_page_visits.datasource").write_text(
+        "\n".join(
+            [
+                "SCHEMA >",
+                "    date Date",
+                "    page_url String",
+                "    visits UInt64",
+                "BACKFILL skip",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = run_migrate(
+        {
+            "cwd": str(tmp_path),
+            "patterns": ["*.datasource"],
+            "dry_run": True,
+        }
+    )
+
+    assert result.success is True
+    assert result.errors == []
+    assert result.output_content is not None
+    assert "'backfill': \"skip\"" in result.output_content

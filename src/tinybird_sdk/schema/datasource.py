@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Literal
 
 from .connection import GCSConnectionDefinition, KafkaConnectionDefinition, S3ConnectionDefinition
 from .engines import EngineConfig
@@ -19,6 +19,7 @@ class ColumnDefinition:
 
 
 SchemaDefinition = dict[str, TypeValidator | ColumnDefinition]
+BackfillOption = Literal["skip"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -74,6 +75,7 @@ class DatasourceOptions:
     schema: SchemaDefinition
     description: str | None = None
     engine: EngineConfig | None = None
+    backfill: BackfillOption | None = None
     tokens: tuple[TokenConfig, ...] = field(default_factory=tuple)
     shared_with: tuple[str, ...] = field(default_factory=tuple)
     json_paths: bool = True
@@ -120,6 +122,7 @@ def define_datasource(name: str, options: dict[str, Any] | DatasourceOptions) ->
             description=options.get("description"),
             schema=options["schema"],
             engine=options.get("engine"),
+            backfill=options.get("backfill"),
             tokens=tokens,
             shared_with=shared_with,
             json_paths=options.get("json_paths", True),
@@ -133,6 +136,9 @@ def define_datasource(name: str, options: dict[str, Any] | DatasourceOptions) ->
     ingestion_count = sum(1 for x in [normalized.kafka, normalized.s3, normalized.gcs] if x is not None)
     if ingestion_count > 1:
         raise ValueError("Datasource can only define one ingestion option: `kafka`, `s3`, or `gcs`.")
+
+    if normalized.backfill not in {None, "skip"}:
+        raise ValueError('Invalid datasource backfill value: only "skip" is supported.')
 
     for index in normalized.indexes:
         if not index.name or any(char.isspace() for char in index.name):

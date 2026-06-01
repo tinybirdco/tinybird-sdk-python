@@ -95,6 +95,7 @@ class DatasourceModel:
     columns: list[DatasourceColumnModel]
     engine: DatasourceEngineModel | None = None
     description: str | None = None
+    backfill: Literal["skip"] | None = None
     indexes: list[DatasourceIndexModel] = field(default_factory=list)
     kafka: DatasourceKafkaModel | None = None
     s3: DatasourceS3Model | None = None

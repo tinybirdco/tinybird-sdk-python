@@ -249,6 +249,7 @@ def parse_datasource_file(resource: ResourceFile) -> DatasourceModel:
     shared_with: list[str] = []
     description: str | None = None
     forward_query: str | None = None
+    backfill: str | None = None
 
     engine_type: str | None = None
     sorting_key: list[str] = []
@@ -394,6 +395,16 @@ def parse_datasource_file(resource: ResourceFile) -> DatasourceModel:
             import_schedule = parse_quoted_value(value)
         elif key == "IMPORT_FROM_TIMESTAMP":
             import_from_timestamp = parse_quoted_value(value)
+        elif key == "BACKFILL":
+            normalized = value.strip().lower()
+            if normalized != "skip":
+                raise MigrationParseError(
+                    resource.file_path,
+                    "datasource",
+                    resource.name,
+                    f'Invalid BACKFILL value: "{value}"',
+                )
+            backfill = "skip"
         elif key == "TOKEN":
             tokens.append(_parse_token(resource.file_path, resource.name, value))
         else:
@@ -495,6 +506,7 @@ def parse_datasource_file(resource: ResourceFile) -> DatasourceModel:
         )
         if engine_type
         else None,
+        backfill=backfill,  # type: ignore[arg-type]
         indexes=indexes,
         kafka=kafka,
         s3=imported,
