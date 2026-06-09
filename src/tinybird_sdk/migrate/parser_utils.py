@@ -7,7 +7,9 @@ from .types import ResourceKind
 
 
 class MigrationParseError(Exception):
-    def __init__(self, file_path: str, resource_kind: ResourceKind, resource_name: str, message: str):
+    def __init__(
+        self, file_path: str, resource_kind: ResourceKind, resource_name: str, message: str
+    ):
         super().__init__(message)
         self.file_path = file_path
         self.resource_kind = resource_kind
@@ -69,7 +71,9 @@ def parse_quoted_value(input: str) -> str:
     return trimmed
 
 
-def parse_literal_from_datafile(value: str) -> str | int | float | bool | None | dict[str, Any] | list[Any]:
+def parse_literal_from_datafile(
+    value: str,
+) -> str | int | float | bool | None | dict[str, Any] | list[Any]:
     trimmed = value.strip()
 
     if trimmed == "NULL":

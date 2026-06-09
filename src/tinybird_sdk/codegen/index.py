@@ -13,7 +13,7 @@ def generate_datasource_code(ds: DatasourceInfo) -> str:
     lines: list[str] = []
 
     if ds.description:
-        lines.extend(["\"\"\"", ds.description, "\"\"\""])
+        lines.extend(['"""', ds.description, '"""'])
 
     lines.append(f"{var_name} = define_datasource({ds.name!r}, {{")
     if ds.description:
@@ -52,7 +52,7 @@ def generate_pipe_code(pipe: PipeInfo) -> str:
         define_func = "define_copy_pipe"
 
     if pipe.description:
-        lines.extend(["\"\"\"", pipe.description, "\"\"\""])
+        lines.extend(['"""', pipe.description, '"""'])
 
     lines.append(f"{var_name} = {define_func}({pipe.name!r}, {{")
     if pipe.description:
@@ -127,7 +127,9 @@ def generate_pipes_file(pipes: list[PipeInfo], datasources: list[DatasourceInfo]
             referenced.add(pipe.copy["target_datasource"])
 
     if referenced:
-        lines.append(f"from .datasources import {', '.join(to_snake_case(name) for name in sorted(referenced))}")
+        lines.append(
+            f"from .datasources import {', '.join(to_snake_case(name) for name in sorted(referenced))}"
+        )
 
     lines.append("")
     if not pipes:
@@ -144,11 +146,15 @@ def generate_client_file(datasources: list[DatasourceInfo], pipes: list[PipeInfo
     ]
 
     if datasources:
-        lines.append(f"from .datasources import {', '.join(to_snake_case(ds.name) for ds in datasources)}")
+        lines.append(
+            f"from .datasources import {', '.join(to_snake_case(ds.name) for ds in datasources)}"
+        )
 
     endpoint_pipes = [pipe for pipe in pipes if pipe.type == "endpoint"]
     if endpoint_pipes:
-        lines.append(f"from .pipes import {', '.join(to_snake_case(pipe.name) for pipe in endpoint_pipes)}")
+        lines.append(
+            f"from .pipes import {', '.join(to_snake_case(pipe.name) for pipe in endpoint_pipes)}"
+        )
 
     lines.extend(
         [

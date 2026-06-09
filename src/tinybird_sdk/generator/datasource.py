@@ -46,7 +46,9 @@ def _format_default_value(value: Any, tinybird_type: str) -> str:
     return f"'{_escape_sql_string(str(value))}'"
 
 
-def _generate_column_line(column_name: str, column: TypeValidator | ColumnDefinition, include_json_paths: bool) -> str:
+def _generate_column_line(
+    column_name: str, column: TypeValidator | ColumnDefinition, include_json_paths: bool
+) -> str:
     validator = get_column_type(column)
     json_path = get_column_json_path(column)
     tinybird_type = validator._tinybirdType
@@ -54,14 +56,18 @@ def _generate_column_line(column_name: str, column: TypeValidator | ColumnDefini
     parts = [f"    {column_name} {tinybird_type}"]
 
     if include_json_paths:
-        effective_json_path = json_path if isinstance(json_path, str) and json_path else f"$.{column_name}"
+        effective_json_path = (
+            json_path if isinstance(json_path, str) and json_path else f"$.{column_name}"
+        )
         parts.append(f"`json:{effective_json_path}`")
 
     if validator._modifiers.has_default:
         if isinstance(validator._modifiers.default_expression, str):
             parts.append(f"DEFAULT {validator._modifiers.default_expression}")
         else:
-            parts.append(f"DEFAULT {_format_default_value(validator._modifiers.default_value, tinybird_type)}")
+            parts.append(
+                f"DEFAULT {_format_default_value(validator._modifiers.default_value, tinybird_type)}"
+            )
 
     if validator._modifiers.codec:
         parts.append(f"CODEC({validator._modifiers.codec})")
@@ -202,5 +208,7 @@ def generate_datasource(datasource: DatasourceDefinition) -> GeneratedDatasource
     return GeneratedDatasource(name=datasource._name, content="\n".join(parts))
 
 
-def generate_all_datasources(datasources: dict[str, DatasourceDefinition]) -> list[GeneratedDatasource]:
+def generate_all_datasources(
+    datasources: dict[str, DatasourceDefinition],
+) -> list[GeneratedDatasource]:
     return [generate_datasource(datasource) for datasource in datasources.values()]

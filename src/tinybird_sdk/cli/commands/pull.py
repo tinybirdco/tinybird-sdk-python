@@ -47,7 +47,11 @@ def _flatten_resources(resources: dict[str, list[ResourceFile]]) -> list[Resourc
 
 def run_pull(options: PullCommandOptions | dict[str, Any] | None = None) -> PullCommandResult:
     start = int(time.time() * 1000)
-    normalized = options if isinstance(options, PullCommandOptions) else PullCommandOptions(**(options or {}))
+    normalized = (
+        options
+        if isinstance(options, PullCommandOptions)
+        else PullCommandOptions(**(options or {}))
+    )
     cwd = Path(normalized.cwd or os.getcwd()).resolve()
     output_dir = Path(normalized.output_dir)
     if not output_dir.is_absolute():
@@ -56,7 +60,9 @@ def run_pull(options: PullCommandOptions | dict[str, Any] | None = None) -> Pull
     try:
         config = load_config_async(str(cwd))
     except Exception as error:
-        return PullCommandResult(success=False, error=str(error), duration_ms=int(time.time() * 1000) - start)
+        return PullCommandResult(
+            success=False, error=str(error), duration_ms=int(time.time() * 1000) - start
+        )
 
     try:
         pulled = pull_all_resource_files({"base_url": config["base_url"], "token": config["token"]})

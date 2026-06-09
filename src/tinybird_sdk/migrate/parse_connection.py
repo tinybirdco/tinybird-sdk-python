@@ -1,7 +1,20 @@
 from __future__ import annotations
 
-from .parser_utils import MigrationParseError, is_blank, parse_directive_line, parse_quoted_value, read_directive_block, split_lines
-from .types import ConnectionModel, GCSConnectionModel, KafkaConnectionModel, ResourceFile, S3ConnectionModel
+from .parser_utils import (
+    MigrationParseError,
+    is_blank,
+    parse_directive_line,
+    parse_quoted_value,
+    read_directive_block,
+    split_lines,
+)
+from .types import (
+    ConnectionModel,
+    GCSConnectionModel,
+    KafkaConnectionModel,
+    ResourceFile,
+    S3ConnectionModel,
+)
 
 CONNECTION_DIRECTIVES = {
     "TYPE",
@@ -117,7 +130,9 @@ def parse_connection_file(resource: ResourceFile) -> ConnectionModel:
         i += 1
 
     if not connection_type:
-        raise MigrationParseError(resource.file_path, "connection", resource.name, "TYPE directive is required.")
+        raise MigrationParseError(
+            resource.file_path, "connection", resource.name, "TYPE directive is required."
+        )
 
     if connection_type == "kafka":
         if region or arn or access_key or access_secret or service_account_credentials_json:

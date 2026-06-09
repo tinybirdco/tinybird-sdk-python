@@ -26,7 +26,7 @@ def _exit_code_from_system_exit(error: SystemExit) -> int:
 
 def _run_installed_tinybird_cli(argv: list[str]) -> int:
     try:
-        from tinybird.tb.cli import cli as upstream_cli  # type: ignore[import-not-found]
+        from tinybird.tb.cli import cli as upstream_cli
     except ModuleNotFoundError:
         output.error("Installed Tinybird CLI dependency is required but could not be imported.")
         return 1
@@ -45,20 +45,34 @@ def create_cli() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="tinybird", description="Tinybird Python SDK CLI")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    init_cmd = sub.add_parser("init", help="Initialize a new Tinybird project with Python SDK templates")
+    init_cmd = sub.add_parser(
+        "init", help="Initialize a new Tinybird project with Python SDK templates"
+    )
     init_cmd.add_argument("--folder", help="Target folder for generated Python files")
     init_cmd.add_argument("--force", action="store_true", help="Overwrite existing files")
 
-    generate_cmd = sub.add_parser("generate", help="Generate Tinybird datafiles from Python definitions")
+    generate_cmd = sub.add_parser(
+        "generate", help="Generate Tinybird datafiles from Python definitions"
+    )
     generate_cmd.add_argument("--json", action="store_true")
     generate_cmd.add_argument("-o", "--output-dir")
 
-    migrate_cmd = sub.add_parser("migrate", help="Migrate Tinybird .datasource/.pipe files to Python resources")
-    migrate_cmd.add_argument("patterns", nargs="+", help="Files, directories, or glob patterns to migrate")
+    migrate_cmd = sub.add_parser(
+        "migrate", help="Migrate Tinybird .datasource/.pipe files to Python resources"
+    )
+    migrate_cmd.add_argument(
+        "patterns", nargs="+", help="Files, directories, or glob patterns to migrate"
+    )
     migrate_cmd.add_argument("--cwd", help="Working directory to resolve patterns from")
-    migrate_cmd.add_argument("-o", "--out", help="Output file path for the generated migration module")
-    migrate_cmd.add_argument("--dry-run", action="store_true", help="Generate output without writing files")
-    migrate_cmd.add_argument("--force", action="store_true", help="Overwrite existing output file when needed")
+    migrate_cmd.add_argument(
+        "-o", "--out", help="Output file path for the generated migration module"
+    )
+    migrate_cmd.add_argument(
+        "--dry-run", action="store_true", help="Generate output without writing files"
+    )
+    migrate_cmd.add_argument(
+        "--force", action="store_true", help="Overwrite existing output file when needed"
+    )
     migrate_cmd.add_argument(
         "--strict",
         action=argparse.BooleanOptionalAction,
@@ -81,10 +95,12 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(normalized_argv)
 
     if args.command == "init":
-        result = run_init({
-            "folder": args.folder,
-            "force": args.force,
-        })
+        result = run_init(
+            {
+                "folder": args.folder,
+                "force": args.force,
+            }
+        )
         if not result.success:
             output.error(result.error or "Init failed")
             return 1
@@ -99,16 +115,16 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "generate":
-        result = run_generate({"output_dir": args.output_dir})
-        if not result.success:
-            output.error(result.error or "Generate failed")
+        generate_result = run_generate({"output_dir": args.output_dir})
+        if not generate_result.success:
+            output.error(generate_result.error or "Generate failed")
             return 1
 
         if args.json:
-            _print_json(asdict(result))
+            _print_json(asdict(generate_result))
             return 0
 
-        stats = result.stats or {
+        stats = generate_result.stats or {
             "datasource_count": 0,
             "pipe_count": 0,
             "connection_count": 0,
@@ -121,12 +137,12 @@ def main(argv: list[str] | None = None) -> int:
             f"{stats['pipe_count']} pipes, "
             f"{stats['connection_count']} connections)"
         )
-        if result.output_dir:
-            print(f"Written to: {result.output_dir}")
-        print(f"Completed in {output.format_duration(result.duration_ms)}")
+        if generate_result.output_dir:
+            print(f"Written to: {generate_result.output_dir}")
+        print(f"Completed in {output.format_duration(generate_result.duration_ms)}")
         return 0
 
-    result = run_migrate(
+    migrate_result = run_migrate(
         {
             "cwd": args.cwd,
             "patterns": args.patterns,
@@ -138,17 +154,17 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     if args.json:
-        _print_json(result)
-        return 0 if result["success"] else 1
+        _print_json(migrate_result)
+        return 0 if migrate_result["success"] else 1
 
-    if result["success"]:
-        migrated_count = len(result.get("migrated") or [])
+    if migrate_result["success"]:
+        migrated_count = len(migrate_result.get("migrated") or [])
         print(f"Migrated {migrated_count} resources")
-        if result.get("output_path"):
-            print(f"Written to: {result['output_path']}")
+        if migrate_result.get("output_path"):
+            print(f"Written to: {migrate_result['output_path']}")
         return 0
 
-    errors = result.get("errors") or []
+    errors = migrate_result.get("errors") or []
     if errors:
         output.error(f"Migrate failed with {len(errors)} error(s)")
         for error in errors:

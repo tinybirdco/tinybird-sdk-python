@@ -64,7 +64,10 @@ def test_parse_connection_supports_multiline_ssl_ca_pem() -> None:
     )
 
     assert parsed.connection_type == "kafka"
-    assert parsed.ssl_ca_pem == "-----BEGIN CERTIFICATE-----\nMIIDXTCCAkWgAwIBAgIJAM\n-----END CERTIFICATE-----"
+    assert (
+        parsed.ssl_ca_pem
+        == "-----BEGIN CERTIFICATE-----\nMIIDXTCCAkWgAwIBAgIJAM\n-----END CERTIFICATE-----"
+    )
 
 
 def test_parse_connection_supports_multiline_ssl_ca_pem_with_following_directives() -> None:
@@ -87,7 +90,10 @@ def test_parse_connection_supports_multiline_ssl_ca_pem_with_following_directive
         )
     )
 
-    assert parsed.ssl_ca_pem == "-----BEGIN CERTIFICATE-----\nMIIDXTCCAkWgAwIBAgIJAM\n-----END CERTIFICATE-----"
+    assert (
+        parsed.ssl_ca_pem
+        == "-----BEGIN CERTIFICATE-----\nMIIDXTCCAkWgAwIBAgIJAM\n-----END CERTIFICATE-----"
+    )
     assert parsed.security_protocol == "SASL_SSL"
     assert parsed.key == "mykey"
 
@@ -273,7 +279,9 @@ def test_parse_pipe_supports_export_write_strategy_alias() -> None:
 
 
 def test_parse_pipe_rejects_export_directives_for_non_sink() -> None:
-    with pytest.raises(MigrationParseError, match=r"EXPORT_\* directives are only supported for TYPE sink"):
+    with pytest.raises(
+        MigrationParseError, match=r"EXPORT_\* directives are only supported for TYPE sink"
+    ):
         parse_pipe_file(
             _resource(
                 "pipe",

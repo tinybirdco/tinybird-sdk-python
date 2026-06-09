@@ -2,13 +2,20 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from .discovery import discover_resource_files
 from .emit_ts import emit_migration_file_content, validate_resource_for_emission
 from .parse import parse_resource_file
 from .parser_utils import MigrationParseError
-from .types import MigrationError, MigrationResult, ParsedResource, ResourceFile
+from .types import (
+    DatasourceGCSModel,
+    DatasourceS3Model,
+    MigrationError,
+    MigrationResult,
+    ParsedResource,
+    ResourceFile,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -86,7 +93,9 @@ def run_migrate(options: MigrateOptions | dict[str, Any]) -> MigrationResult:
     migrated: list[ParsedResource] = []
     migrated_connection_names: set[str] = set()
     migrated_datasource_names: set[str] = set()
-    parsed_connection_type_by_name = {connection.name: connection.connection_type for connection in parsed_connections}
+    parsed_connection_type_by_name = {
+        connection.name: connection.connection_type for connection in parsed_connections
+    }
 
     for connection in parsed_connections:
         try:
@@ -114,14 +123,17 @@ def run_migrate(options: MigrateOptions | dict[str, Any]) -> MigrationResult:
             else None
         )
 
-        if referenced_connection_name and referenced_connection_name not in migrated_connection_names:
+        if (
+            referenced_connection_name
+            and referenced_connection_name not in migrated_connection_names
+        ):
             errors.append(
                 MigrationError(
                     file_path=datasource.file_path,
                     resource_name=datasource.name,
                     resource_kind=datasource.kind,
                     message=(
-                        f'Datasource references missing/unmigrated connection '
+                        f"Datasource references missing/unmigrated connection "
                         f'"{referenced_connection_name}".'
                     ),
                 )
@@ -129,7 +141,9 @@ def run_migrate(options: MigrateOptions | dict[str, Any]) -> MigrationResult:
             continue
 
         if datasource.kafka:
-            kafka_connection_type = parsed_connection_type_by_name.get(datasource.kafka.connection_name)
+            kafka_connection_type = parsed_connection_type_by_name.get(
+                datasource.kafka.connection_name
+            )
             if kafka_connection_type != "kafka":
                 errors.append(
                     MigrationError(
@@ -137,7 +151,7 @@ def run_migrate(options: MigrateOptions | dict[str, Any]) -> MigrationResult:
                         resource_name=datasource.name,
                         resource_kind=datasource.kind,
                         message=(
-                            f'Datasource kafka ingestion requires a kafka connection, found '
+                            f"Datasource kafka ingestion requires a kafka connection, found "
                             f'"{kafka_connection_type or "(none)"}".'
                         ),
                     )
@@ -147,7 +161,9 @@ def run_migrate(options: MigrateOptions | dict[str, Any]) -> MigrationResult:
         import_config = datasource.s3 or datasource.gcs
         normalized_datasource = datasource
         if import_config:
-            import_connection_type = parsed_connection_type_by_name.get(import_config.connection_name)
+            import_connection_type = parsed_connection_type_by_name.get(
+                import_config.connection_name
+            )
             if import_connection_type not in {"s3", "gcs"}:
                 errors.append(
                     MigrationError(
@@ -165,13 +181,13 @@ def run_migrate(options: MigrateOptions | dict[str, Any]) -> MigrationResult:
             if import_connection_type == "gcs":
                 normalized_datasource = replace(
                     datasource,
-                    gcs=replace(import_config),
+                    gcs=replace(cast(DatasourceGCSModel, import_config)),
                     s3=None,
                 )
             else:
                 normalized_datasource = replace(
                     datasource,
-                    s3=replace(import_config),
+                    s3=replace(cast(DatasourceS3Model, import_config)),
                     gcs=None,
                 )
 
@@ -199,7 +215,7 @@ def run_migrate(options: MigrateOptions | dict[str, Any]) -> MigrationResult:
                         resource_name=pipe.name,
                         resource_kind=pipe.kind,
                         message=(
-                            f'Sink pipe references missing/unmigrated connection '
+                            f"Sink pipe references missing/unmigrated connection "
                             f'"{sink_connection_name or "(none)"}".'
                         ),
                     )
@@ -233,7 +249,8 @@ def run_migrate(options: MigrateOptions | dict[str, Any]) -> MigrationResult:
                 continue
 
         if pipe.type == "materialized" and (
-            not pipe.materialized_datasource or pipe.materialized_datasource not in migrated_datasource_names
+            not pipe.materialized_datasource
+            or pipe.materialized_datasource not in migrated_datasource_names
         ):
             errors.append(
                 MigrationError(
@@ -241,7 +258,7 @@ def run_migrate(options: MigrateOptions | dict[str, Any]) -> MigrationResult:
                     resource_name=pipe.name,
                     resource_kind=pipe.kind,
                     message=(
-                        f'Materialized pipe references missing/unmigrated datasource '
+                        f"Materialized pipe references missing/unmigrated datasource "
                         f'"{pipe.materialized_datasource or "(none)"}".'
                     ),
                 )
@@ -249,7 +266,8 @@ def run_migrate(options: MigrateOptions | dict[str, Any]) -> MigrationResult:
             continue
 
         if pipe.type == "copy" and (
-            not pipe.copy_target_datasource or pipe.copy_target_datasource not in migrated_datasource_names
+            not pipe.copy_target_datasource
+            or pipe.copy_target_datasource not in migrated_datasource_names
         ):
             errors.append(
                 MigrationError(
@@ -257,7 +275,7 @@ def run_migrate(options: MigrateOptions | dict[str, Any]) -> MigrationResult:
                     resource_name=pipe.name,
                     resource_kind=pipe.kind,
                     message=(
-                        f'Copy pipe references missing/unmigrated datasource '
+                        f"Copy pipe references missing/unmigrated datasource "
                         f'"{pipe.copy_target_datasource or "(none)"}".'
                     ),
                 )

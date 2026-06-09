@@ -8,6 +8,8 @@ from urllib.parse import urlencode
 
 from .fetcher import tinybird_fetch
 
+LAST_PARTITION = "last_partition"
+
 
 @dataclass(frozen=True, slots=True)
 class BranchApiConfig:
@@ -34,7 +36,9 @@ def _headers(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
-def _poll_job(config: BranchApiConfig, job_id: str, max_attempts: int = 120, interval_ms: int = 1000) -> None:
+def _poll_job(
+    config: BranchApiConfig, job_id: str, max_attempts: int = 120, interval_ms: int = 1000
+) -> None:
     for _ in range(max_attempts):
         response = tinybird_fetch(
             f"{config.base_url.rstrip('/')}/v0/jobs/{job_id}",
@@ -80,13 +84,17 @@ def create_branch(config: BranchApiConfig | dict[str, Any], name: str) -> Tinybi
         elif response.status_code == 409:
             message = f"Branch '{name}' already exists."
         else:
-            message = f"Failed to create branch '{name}': {response.status_code}. API response: {body}"
+            message = (
+                f"Failed to create branch '{name}': {response.status_code}. API response: {body}"
+            )
         raise BranchApiError(message, response.status_code, body)
 
     job = response.json().get("job", {})
     job_id = job.get("id")
     if not job_id:
-        raise BranchApiError("Unexpected response from branch creation: no job ID returned", 500, response.json())
+        raise BranchApiError(
+            "Unexpected response from branch creation: no job ID returned", 500, response.json()
+        )
 
     _poll_job(normalized, job_id)
     return get_branch(normalized, name)

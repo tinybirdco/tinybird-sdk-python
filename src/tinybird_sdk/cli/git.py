@@ -31,7 +31,9 @@ def _get_branch_from_ci_env() -> str | None:
 def get_current_git_branch() -> str | None:
     try:
         branch = (
-            subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"], stderr=subprocess.DEVNULL)
+            subprocess.check_output(
+                ["git", "rev-parse", "--abbrev-ref", "HEAD"], stderr=subprocess.DEVNULL
+            )
             .decode("utf-8")
             .strip()
         )
@@ -58,7 +60,9 @@ def is_git_repo() -> bool:
 def get_git_root() -> str | None:
     try:
         return (
-            subprocess.check_output(["git", "rev-parse", "--show-toplevel"], stderr=subprocess.DEVNULL)
+            subprocess.check_output(
+                ["git", "rev-parse", "--show-toplevel"], stderr=subprocess.DEVNULL
+            )
             .decode("utf-8")
             .strip()
         )

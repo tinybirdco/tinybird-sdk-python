@@ -1,21 +1,23 @@
 from __future__ import annotations
 
 from dataclasses import asdict
-from typing import Any
+from typing import Any, cast
 
 from ..api.api import TinybirdApi, TinybirdApiError
 from ..api.branches import get_or_create_branch
 from ..cli.config import load_config_async
 from .preview import get_preview_branch_name, is_preview_environment
 from .tokens import TokensNamespace
-from .types import ClientContext, TinybirdError
+from .types import ClientContext, TinybirdError, TinybirdErrorResponse
 
 
 class _DatasourcesNamespace:
     def __init__(self, client: "TinybirdClient"):
         self._client = client
 
-    def ingest(self, datasource_name: str, event: dict[str, Any], options: dict[str, Any] | None = None) -> dict[str, Any]:
+    def ingest(
+        self, datasource_name: str, event: dict[str, Any], options: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         return self._client._ingest_datasource(datasource_name, event, options or {})
 
     def append(self, datasource_name: str, options: dict[str, Any]) -> dict[str, Any]:
@@ -27,7 +29,9 @@ class _DatasourcesNamespace:
     def delete(self, datasource_name: str, options: dict[str, Any]) -> dict[str, Any]:
         return self._client._delete_datasource(datasource_name, options)
 
-    def truncate(self, datasource_name: str, options: dict[str, Any] | None = None) -> dict[str, Any]:
+    def truncate(
+        self, datasource_name: str, options: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         return self._client._truncate_datasource(datasource_name, options or {})
 
 
@@ -55,13 +59,17 @@ class TinybirdClient:
             return self._get_api(token).append_datasource(datasource_name, options)
         except Exception as error:
             self._rethrow_api_error(error)
+            raise AssertionError("unreachable")
 
     def _replace_datasource(self, datasource_name: str, options: dict[str, Any]) -> dict[str, Any]:
         token = self._get_token()
         try:
-            return self._get_api(token).append_datasource(datasource_name, options, {"mode": "replace"})
+            return self._get_api(token).append_datasource(
+                datasource_name, options, {"mode": "replace"}
+            )
         except Exception as error:
             self._rethrow_api_error(error)
+            raise AssertionError("unreachable")
 
     def _delete_datasource(self, datasource_name: str, options: dict[str, Any]) -> dict[str, Any]:
         token = self._get_token()
@@ -69,6 +77,7 @@ class TinybirdClient:
             return self._get_api(token).delete_datasource(datasource_name, options)
         except Exception as error:
             self._rethrow_api_error(error)
+            raise AssertionError("unreachable")
 
     def _truncate_datasource(self, datasource_name: str, options: dict[str, Any]) -> dict[str, Any]:
         token = self._get_token()
@@ -76,13 +85,17 @@ class TinybirdClient:
             return self._get_api(token).truncate_datasource(datasource_name, options)
         except Exception as error:
             self._rethrow_api_error(error)
+            raise AssertionError("unreachable")
 
-    def _ingest_datasource(self, datasource_name: str, event: dict[str, Any], options: dict[str, Any]) -> dict[str, Any]:
+    def _ingest_datasource(
+        self, datasource_name: str, event: dict[str, Any], options: dict[str, Any]
+    ) -> dict[str, Any]:
         token = self._get_token()
         try:
             return self._get_api(token).ingest_batch(datasource_name, [event], options)
         except Exception as error:
             self._rethrow_api_error(error)
+            raise AssertionError("unreachable")
 
     def _get_token(self) -> str:
         return self._resolve_context().token
@@ -174,14 +187,22 @@ class TinybirdClient:
         except Exception as error:
             raise TinybirdError(f"Failed to resolve branch context: {error}", 500) from error
 
-    def query(self, pipe_name: str, params: dict[str, Any] | None = None, options: dict[str, Any] | None = None) -> dict[str, Any]:
+    def query(
+        self,
+        pipe_name: str,
+        params: dict[str, Any] | None = None,
+        options: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         token = self._get_token()
         try:
             return self._get_api(token).query(pipe_name, params or {}, options or {})
         except Exception as error:
             self._rethrow_api_error(error)
+            raise AssertionError("unreachable")
 
-    def ingest(self, datasource_name: str, event: dict[str, Any], options: dict[str, Any] | None = None) -> dict[str, Any]:
+    def ingest(
+        self, datasource_name: str, event: dict[str, Any], options: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         return self.datasources.ingest(datasource_name, event, options or {})
 
     def ingest_batch(
@@ -195,6 +216,7 @@ class TinybirdClient:
             return self._get_api(token).ingest_batch(datasource_name, events, options or {})
         except Exception as error:
             self._rethrow_api_error(error)
+            raise AssertionError("unreachable")
 
     def sql(self, sql: str, options: dict[str, Any] | None = None) -> dict[str, Any]:
         token = self._get_token()
@@ -202,6 +224,7 @@ class TinybirdClient:
             return self._get_api(token).sql(sql, options or {})
         except Exception as error:
             self._rethrow_api_error(error)
+            raise AssertionError("unreachable")
 
     def get_context(self) -> dict[str, Any]:
         return asdict(self._resolve_context())
@@ -222,7 +245,8 @@ class TinybirdClient:
 
     def _rethrow_api_error(self, error: Exception) -> None:
         if isinstance(error, TinybirdApiError):
-            raise TinybirdError(str(error), error.status_code, error.response) from error
+            response = cast(TinybirdErrorResponse | None, error.response)
+            raise TinybirdError(str(error), error.status_code, response) from error
         raise error
 
 

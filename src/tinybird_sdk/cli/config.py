@@ -158,7 +158,11 @@ def _resolve_config(config: TinybirdConfig, config_path: str) -> ResolvedConfig:
     load_env_files(config_dir)
     tinyb_auth = _read_tinyb_auth(config_dir)
 
-    token = _try_interpolate_env_vars(config.token) or os.getenv("TINYBIRD_TOKEN") or tinyb_auth["token"]
+    token = (
+        _try_interpolate_env_vars(config.token)
+        or os.getenv("TINYBIRD_TOKEN")
+        or tinyb_auth["token"]
+    )
     if not token:
         raise ValueError(
             f"Missing Tinybird token in {config_path}. "
@@ -251,7 +255,9 @@ def update_config(config_path: str, updates: dict[str, Any]) -> None:
     if not path.exists():
         raise ValueError(f"Config not found at {config_path}")
     if path.suffix != ".json":
-        raise ValueError(f"Cannot update {config_path}. Only JSON config files can be updated programmatically.")
+        raise ValueError(
+            f"Cannot update {config_path}. Only JSON config files can be updated programmatically."
+        )
 
     with open(path, "r", encoding="utf-8") as fp:
         current = json.load(fp)

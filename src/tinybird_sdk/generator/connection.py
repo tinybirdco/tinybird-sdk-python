@@ -72,13 +72,21 @@ def _generate_gcs_connection(connection: GCSConnectionDefinition) -> str:
 
 def generate_connection(connection: ConnectionDefinition) -> GeneratedConnection:
     if isinstance(connection, KafkaConnectionDefinition):
-        return GeneratedConnection(name=connection._name, content=_generate_kafka_connection(connection))
+        return GeneratedConnection(
+            name=connection._name, content=_generate_kafka_connection(connection)
+        )
     if isinstance(connection, S3ConnectionDefinition):
-        return GeneratedConnection(name=connection._name, content=_generate_s3_connection(connection))
+        return GeneratedConnection(
+            name=connection._name, content=_generate_s3_connection(connection)
+        )
     if isinstance(connection, GCSConnectionDefinition):
-        return GeneratedConnection(name=connection._name, content=_generate_gcs_connection(connection))
+        return GeneratedConnection(
+            name=connection._name, content=_generate_gcs_connection(connection)
+        )
     raise ValueError(f"Unsupported connection type: {connection._connectionType}")
 
 
-def generate_all_connections(connections: dict[str, ConnectionDefinition]) -> list[GeneratedConnection]:
+def generate_all_connections(
+    connections: dict[str, ConnectionDefinition],
+) -> list[GeneratedConnection]:
     return [generate_connection(connection) for connection in connections.values()]

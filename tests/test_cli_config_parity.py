@@ -47,12 +47,17 @@ def test_find_config_file_python_priority(tmp_path: Path) -> None:
     assert found["path"].endswith("tinybird.config.py")
 
 
-def test_load_config_loads_dotenv_local_before_dotenv(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_load_config_loads_dotenv_local_before_dotenv(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     project = tmp_path / "project"
     project.mkdir()
 
     (project / ".env.local").write_text("TINYBIRD_TOKEN=local_token\n", encoding="utf-8")
-    (project / ".env").write_text("TINYBIRD_TOKEN=env_token\nTINYBIRD_URL=https://api.us-east-1.aws.tinybird.co\n", encoding="utf-8")
+    (project / ".env").write_text(
+        "TINYBIRD_TOKEN=env_token\nTINYBIRD_URL=https://api.us-east-1.aws.tinybird.co\n",
+        encoding="utf-8",
+    )
     (project / "tinybird.config.json").write_text(
         json.dumps(
             {
@@ -137,7 +142,9 @@ def test_load_config_falls_back_to_tinyb_file_when_config_and_env_are_missing(
     assert loaded["base_url"] == "https://api.eu-central-1.aws.tinybird.co"
 
 
-def test_load_config_raises_when_no_token_sources_are_available(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_load_config_raises_when_no_token_sources_are_available(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     project = tmp_path / "project"
     project.mkdir()
 

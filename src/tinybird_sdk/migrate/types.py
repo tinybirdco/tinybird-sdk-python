@@ -211,7 +211,9 @@ class GCSConnectionModel:
 
 ConnectionModel = KafkaConnectionModel | S3ConnectionModel | GCSConnectionModel
 
-ParsedResource = DatasourceModel | PipeModel | KafkaConnectionModel | S3ConnectionModel | GCSConnectionModel
+ParsedResource = (
+    DatasourceModel | PipeModel | KafkaConnectionModel | S3ConnectionModel | GCSConnectionModel
+)
 
 
 @dataclass(frozen=True, slots=True)

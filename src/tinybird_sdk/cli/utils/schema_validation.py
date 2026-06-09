@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, TypedDict
 
 from ...client.base import TinybirdClient
 from ...schema.pipe import PipeDefinition
@@ -32,8 +32,21 @@ class SchemaValidationResult:
     pipes_skipped: list[str]
 
 
-def validate_pipe_schemas(options: SchemaValidationOptions | dict[str, Any]) -> SchemaValidationResult:
-    normalized = options if isinstance(options, SchemaValidationOptions) else SchemaValidationOptions(**options)
+class _SchemaValidationSummary(TypedDict):
+    valid: bool
+    missing_columns: list[dict[str, str]]
+    extra_columns: list[dict[str, str]]
+    type_mismatches: list[dict[str, str]]
+
+
+def validate_pipe_schemas(
+    options: SchemaValidationOptions | dict[str, Any],
+) -> SchemaValidationResult:
+    normalized = (
+        options
+        if isinstance(options, SchemaValidationOptions)
+        else SchemaValidationOptions(**options)
+    )
 
     client = TinybirdClient({"base_url": normalized.base_url, "token": normalized.token})
 
@@ -105,7 +118,9 @@ def validate_pipe_schemas(options: SchemaValidationOptions | dict[str, Any]) -> 
         except Exception:
             skipped.append(pipe_name)
 
-    return SchemaValidationResult(valid=valid, issues=issues, pipes_validated=validated, pipes_skipped=skipped)
+    return SchemaValidationResult(
+        valid=valid, issues=issues, pipes_validated=validated, pipes_skipped=skipped
+    )
 
 
 def _has_required_params(pipe: PipeDefinition) -> bool:
@@ -142,8 +157,10 @@ def _types_are_compatible(actual: str, expected: str) -> bool:
     return _normalize_type(actual) == _normalize_type(expected)
 
 
-def _validate_output_schema(response_meta: list[dict[str, str]], output_schema: dict[str, Any]) -> dict[str, Any]:
-    result = {
+def _validate_output_schema(
+    response_meta: list[dict[str, str]], output_schema: dict[str, Any]
+) -> _SchemaValidationSummary:
+    result: _SchemaValidationSummary = {
         "valid": True,
         "missing_columns": [],
         "extra_columns": [],

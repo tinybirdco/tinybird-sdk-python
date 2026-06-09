@@ -42,7 +42,9 @@ def deploy_to_main(
 
     files: list[tuple[str, str, bytes, str | None]] = []
     for ds in resources.datasources:
-        files.append(("data_project://", f"{ds.name}.datasource", ds.content.encode(), "text/plain"))
+        files.append(
+            ("data_project://", f"{ds.name}.datasource", ds.content.encode(), "text/plain")
+        )
     for pipe in resources.pipes:
         files.append(("data_project://", f"{pipe.name}.pipe", pipe.content.encode(), "text/plain"))
 
@@ -87,7 +89,9 @@ def deploy_to_main(
         api_errors = parsed.get("errors") or []
         if api_errors:
             return "\n".join(
-                f"[{item.get('filename')}] {item.get('error')}" if item.get("filename") else str(item.get("error"))
+                f"[{item.get('filename')}] {item.get('error')}"
+                if item.get("filename")
+                else str(item.get("error"))
                 for item in api_errors
             )
         if parsed.get("error"):

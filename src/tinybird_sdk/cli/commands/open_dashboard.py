@@ -28,28 +28,43 @@ class OpenDashboardCommandResult:
     error: str | None = None
 
 
-def run_open_dashboard(options: OpenDashboardCommandOptions | dict[str, Any] | None = None) -> OpenDashboardCommandResult:
-    normalized = options if isinstance(options, OpenDashboardCommandOptions) else OpenDashboardCommandOptions(**(options or {}))
+def run_open_dashboard(
+    options: OpenDashboardCommandOptions | dict[str, Any] | None = None,
+) -> OpenDashboardCommandResult:
+    normalized = (
+        options
+        if isinstance(options, OpenDashboardCommandOptions)
+        else OpenDashboardCommandOptions(**(options or {}))
+    )
 
     try:
         config = load_config_async(normalized.cwd or os.getcwd())
         workspace = get_workspace({"base_url": config["base_url"], "token": config["token"]})
 
         env = normalized.environment or config.get("dev_mode") or "cloud"
+        url: str | None = None
         if env == "local":
             workspace_name = config.get("tinybird_branch") or workspace.name
             url = get_local_dashboard_url(workspace_name)
         elif env == "branch":
             branch_name = config.get("tinybird_branch")
             if not branch_name:
-                return OpenDashboardCommandResult(success=False, error="No tinybird branch available", environment="branch")
+                return OpenDashboardCommandResult(
+                    success=False, error="No tinybird branch available", environment="branch"
+                )
             url = get_branch_dashboard_url(config["base_url"], workspace.name, branch_name)
             if not url:
-                return OpenDashboardCommandResult(success=False, error="Could not derive branch dashboard URL", environment="branch")
+                return OpenDashboardCommandResult(
+                    success=False,
+                    error="Could not derive branch dashboard URL",
+                    environment="branch",
+                )
         else:
             url = get_dashboard_url(config["base_url"], workspace.name)
             if not url:
-                return OpenDashboardCommandResult(success=False, error="Could not derive dashboard URL", environment="cloud")
+                return OpenDashboardCommandResult(
+                    success=False, error="Could not derive dashboard URL", environment="cloud"
+                )
 
         opened = webbrowser.open(url)
         return OpenDashboardCommandResult(
@@ -62,4 +77,9 @@ def run_open_dashboard(options: OpenDashboardCommandOptions | dict[str, Any] | N
         return OpenDashboardCommandResult(success=False, error=str(error))
 
 
-__all__ = ["Environment", "OpenDashboardCommandOptions", "OpenDashboardCommandResult", "run_open_dashboard"]
+__all__ = [
+    "Environment",
+    "OpenDashboardCommandOptions",
+    "OpenDashboardCommandResult",
+    "run_open_dashboard",
+]

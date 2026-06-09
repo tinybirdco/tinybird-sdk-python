@@ -28,16 +28,24 @@ class DeployCommandResult:
 
 def run_deploy(options: DeployCommandOptions | dict[str, Any] | None = None) -> DeployCommandResult:
     start = int(time.time() * 1000)
-    normalized = options if isinstance(options, DeployCommandOptions) else DeployCommandOptions(**(options or {}))
+    normalized = (
+        options
+        if isinstance(options, DeployCommandOptions)
+        else DeployCommandOptions(**(options or {}))
+    )
     cwd = normalized.cwd or os.getcwd()
 
     try:
         config = load_config_async(cwd)
     except Exception as error:
-        return DeployCommandResult(success=False, error=str(error), duration_ms=int(time.time() * 1000) - start)
+        return DeployCommandResult(
+            success=False, error=str(error), duration_ms=int(time.time() * 1000) - start
+        )
 
     try:
-        build_result = build_from_include({"include_paths": config["include"], "cwd": config["cwd"]})
+        build_result = build_from_include(
+            {"include_paths": config["include"], "cwd": config["cwd"]}
+        )
     except Exception as error:
         return DeployCommandResult(
             success=False,
@@ -49,7 +57,10 @@ def run_deploy(options: DeployCommandOptions | dict[str, Any] | None = None) -> 
         deploy_result = deploy_to_main(
             {"base_url": config["base_url"], "token": config["token"]},
             build_result.resources,
-            {"check": normalized.check, "allow_destructive_operations": normalized.allow_destructive_operations},
+            {
+                "check": normalized.check,
+                "allow_destructive_operations": normalized.allow_destructive_operations,
+            },
         )
     except Exception as error:
         return DeployCommandResult(

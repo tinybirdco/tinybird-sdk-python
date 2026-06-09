@@ -157,7 +157,9 @@ def create_multipart_body(
         )
 
     for field_name, filename, content, explicit_content_type in files:
-        content_type = explicit_content_type or mimetypes.guess_type(filename)[0] or "application/octet-stream"
+        content_type = (
+            explicit_content_type or mimetypes.guess_type(filename)[0] or "application/octet-stream"
+        )
         lines.extend(
             [
                 f"--{boundary}".encode(),

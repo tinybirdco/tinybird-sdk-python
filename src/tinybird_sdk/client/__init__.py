@@ -6,7 +6,12 @@ from .types import (
     IngestResult,
     ClientConfig,
 )
-from .preview import is_preview_environment, get_preview_branch_name, resolve_token, clear_token_cache
+from .preview import (
+    is_preview_environment,
+    get_preview_branch_name,
+    resolve_token,
+    clear_token_cache,
+)
 
 __all__ = [
     "TinybirdClient",

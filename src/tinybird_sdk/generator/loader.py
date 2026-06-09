@@ -116,15 +116,23 @@ def load_schema(options: LoaderOptions | dict[str, Any]) -> LoadedSchema:
             f"No ProjectDefinition found in {schema_path}. Export `project` or a value created with define_project()."
         )
 
-    return LoadedSchema(project=project, schema_path=str(schema_path), schema_dir=str(schema_path.parent))
+    return LoadedSchema(
+        project=project, schema_path=str(schema_path), schema_dir=str(schema_path.parent)
+    )
 
 
 def _is_raw_datafile(source_path: str) -> bool:
-    return source_path.endswith(".datasource") or source_path.endswith(".pipe") or source_path.endswith(".connection")
+    return (
+        source_path.endswith(".datasource")
+        or source_path.endswith(".pipe")
+        or source_path.endswith(".connection")
+    )
 
 
 def load_entities(options: LoadEntitiesOptions | dict[str, Any]) -> LoadedEntities:
-    normalized = options if isinstance(options, LoadEntitiesOptions) else LoadEntitiesOptions(**options)
+    normalized = (
+        options if isinstance(options, LoadEntitiesOptions) else LoadEntitiesOptions(**options)
+    )
     cwd = Path(normalized.cwd or ".").resolve()
     include_files = resolve_include_files(normalized.include_paths, str(cwd))
 
@@ -194,11 +202,15 @@ def entities_to_project(entities: LoadedEntities) -> dict[str, Any]:
     }
 
 
-def watch_schema(options: WatchOptions | dict[str, Any], callback: Callable[[], None]) -> WatchController:
+def watch_schema(
+    options: WatchOptions | dict[str, Any], callback: Callable[[], None]
+) -> WatchController:
     normalized = options if isinstance(options, WatchOptions) else WatchOptions(**options)
     cwd = Path(normalized.cwd or ".").resolve()
     interval = max(normalized.interval_ms, 100) / 1000.0
-    watch_dirs = [Path(p) for p in get_include_watch_directories(normalized.include_paths, str(cwd))]
+    watch_dirs = [
+        Path(p) for p in get_include_watch_directories(normalized.include_paths, str(cwd))
+    ]
     stop_flag = {"stop": False}
 
     mtimes: dict[str, float] = {}

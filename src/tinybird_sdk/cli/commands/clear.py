@@ -27,12 +27,18 @@ class ClearResult:
 
 def run_clear(options: ClearCommandOptions | dict[str, Any] | None = None) -> ClearResult:
     start = int(time.time() * 1000)
-    normalized = options if isinstance(options, ClearCommandOptions) else ClearCommandOptions(**(options or {}))
+    normalized = (
+        options
+        if isinstance(options, ClearCommandOptions)
+        else ClearCommandOptions(**(options or {}))
+    )
 
     try:
         config = load_config_async(normalized.cwd or os.getcwd())
     except Exception as error:
-        return ClearResult(success=False, error=str(error), duration_ms=int(time.time() * 1000) - start)
+        return ClearResult(
+            success=False, error=str(error), duration_ms=int(time.time() * 1000) - start
+        )
 
     dev_mode = normalized.dev_mode_override or config.get("dev_mode", "branch")
 
@@ -61,7 +67,9 @@ def run_clear(options: ClearCommandOptions | dict[str, Any] | None = None) -> Cl
             duration_ms=int(time.time() * 1000) - start,
         )
     except Exception as error:
-        return ClearResult(success=False, error=str(error), duration_ms=int(time.time() * 1000) - start)
+        return ClearResult(
+            success=False, error=str(error), duration_ms=int(time.time() * 1000) - start
+        )
 
 
 __all__ = ["ClearCommandOptions", "ClearResult", "run_clear"]

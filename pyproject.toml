@@ -3,6 +3,7 @@ name = "tinybird-sdk"
 version = "0.1.9"
 description = "Python SDK for Tinybird Forward"
 readme = "README.md"
+license = "MIT"
 authors = [
     { name = "Tinybird", email = "support@tinybird.co" }
 ]
@@ -10,6 +11,21 @@ requires-python = ">=3.11"
 dependencies = [
     "tinybird==4.5.0",
 ]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries",
+]
+
+[project.urls]
+Homepage = "https://github.com/tinybirdco/tinybird-sdk-python"
+Repository = "https://github.com/tinybirdco/tinybird-sdk-python"
+Issues = "https://github.com/tinybirdco/tinybird-sdk-python/issues"
+Changelog = "https://github.com/tinybirdco/tinybird-sdk-python/blob/main/CHANGELOG.md"
 
 [project.scripts]
 tinybird = "tinybird_sdk.cli.index:main"
@@ -23,7 +39,33 @@ pythonpath = ["src"]
 addopts = "-q"
 testpaths = ["tests"]
 
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = ["src", "tests"]
+extend-exclude = ["tests/fixtures/**"]
+
+[tool.ruff.lint]
+select = ["E", "F"]
+ignore = ["E501", "F401"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.11"
+files = ["src"]
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+pretty = true
+ignore_missing_imports = true
+
 [dependency-groups]
 dev = [
+    "mypy>=1.18.2",
+    "pre-commit>=4.3.0",
     "pytest>=9.0.2",
+    "ruff>=0.13.2",
 ]

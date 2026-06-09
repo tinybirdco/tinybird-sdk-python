@@ -108,7 +108,9 @@ def test_define_datasource_validates_index_name_and_granularity() -> None:
             "events",
             {
                 "schema": {"id": t.int32()},
-                "indexes": [{"name": "bad name", "expr": "id", "type": "set(10)", "granularity": 1}],
+                "indexes": [
+                    {"name": "bad name", "expr": "id", "type": "set(10)", "granularity": 1}
+                ],
             },
         )
 
@@ -127,7 +129,7 @@ def test_generate_datasource_ignores_non_string_json_path(monkeypatch: pytest.Mo
 
     monkeypatch.setattr(
         "tinybird_sdk.generator.datasource.get_column_json_path",
-        lambda *_args, **_kwargs: (lambda _value: "$.bad"),
+        lambda *_args, **_kwargs: lambda _value: "$.bad",
     )
 
     generated = generate_datasource(datasource)

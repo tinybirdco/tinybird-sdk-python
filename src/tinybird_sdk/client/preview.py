@@ -89,7 +89,9 @@ def resolve_token(options: dict[str, Any] | None = None) -> str:
             if _cached_branch_token and _cached_branch_name == branch_name:
                 return _cached_branch_token
 
-            base_url = options.get("base_url") or os.getenv("TINYBIRD_URL") or "https://api.tinybird.co"
+            base_url = (
+                options.get("base_url") or os.getenv("TINYBIRD_URL") or "https://api.tinybird.co"
+            )
             branch_token = _fetch_branch_token(base_url, configured_token, branch_name)
             if branch_token:
                 _cached_branch_token = branch_token

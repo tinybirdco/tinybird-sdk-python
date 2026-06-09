@@ -81,14 +81,22 @@ def _write_artifacts(output_dir: Path, artifacts: list[GeneratedResourceArtifact
         target_path.write_text(artifact.content, encoding="utf-8")
 
 
-def run_generate(options: GenerateCommandOptions | dict[str, Any] | None = None) -> GenerateCommandResult:
+def run_generate(
+    options: GenerateCommandOptions | dict[str, Any] | None = None,
+) -> GenerateCommandResult:
     start = int(time.time() * 1000)
-    normalized = options if isinstance(options, GenerateCommandOptions) else GenerateCommandOptions(**(options or {}))
+    normalized = (
+        options
+        if isinstance(options, GenerateCommandOptions)
+        else GenerateCommandOptions(**(options or {}))
+    )
     cwd = Path(normalized.cwd or os.getcwd()).resolve()
 
     try:
         config = load_config_async(str(cwd))
-        build_result = build_from_include({"include_paths": config["include"], "cwd": config["cwd"]})
+        build_result = build_from_include(
+            {"include_paths": config["include"], "cwd": config["cwd"]}
+        )
         artifacts = _to_artifacts(build_result)
 
         resolved_output_dir: str | None = None
@@ -118,6 +126,7 @@ def run_generate(options: GenerateCommandOptions | dict[str, Any] | None = None)
             error=str(error),
             duration_ms=int(time.time() * 1000) - start,
         )
+
 
 runGenerate = run_generate
 

@@ -1,14 +1,14 @@
 name: publish
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - pyproject.toml
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
 
 jobs:
   publish:
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' }}
     runs-on: ubuntu-latest
     environment:
       name: pypi
@@ -19,13 +19,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 2
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Detect version change
         id: version_check
         run: |
-          BEFORE_SHA="${{ github.event.before }}"
-          AFTER_SHA="${{ github.sha }}"
+          BEFORE_SHA="$(git rev-parse HEAD^)"
+          AFTER_SHA="$(git rev-parse HEAD)"
 
           BEFORE_VERSION="$(git show "${BEFORE_SHA}:pyproject.toml" 2>/dev/null | sed -nE 's/^version = "([^"]+)"/\1/p' | head -n1)"
           AFTER_VERSION="$(sed -nE 's/^version = "([^"]+)"/\1/p' pyproject.toml | head -n1)"

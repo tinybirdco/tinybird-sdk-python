@@ -96,7 +96,7 @@ def test_run_migrate_maps_import_directives_to_gcs_when_connection_is_gcs(tmp_pa
         "\n".join(
             [
                 "TYPE gcs",
-                "GCS_SERVICE_ACCOUNT_CREDENTIALS_JSON '{\"project\":\"demo\"}'",
+                'GCS_SERVICE_ACCOUNT_CREDENTIALS_JSON \'{"project":"demo"}\'',
             ]
         ),
         encoding="utf-8",
@@ -160,7 +160,9 @@ def test_run_migrate_rejects_kafka_datasource_with_non_kafka_connection(tmp_path
     )
 
     assert result.success is False
-    assert any("kafka ingestion requires a kafka connection" in error.message for error in result.errors)
+    assert any(
+        "kafka ingestion requires a kafka connection" in error.message for error in result.errors
+    )
 
 
 def test_run_migrate_rejects_sink_connection_type_mismatch(tmp_path: Path) -> None:
@@ -228,7 +230,7 @@ def test_run_migrate_emits_default_expr_for_sql_function_defaults(tmp_path: Path
     assert result.success is True
     assert result.errors == []
     assert result.output_content is not None
-    assert '\'id\': t.uuid().default_expr("generateUUIDv4()"),' in result.output_content
+    assert "'id': t.uuid().default_expr(\"generateUUIDv4()\")," in result.output_content
     assert "'payload': t.string().default('{}')," in result.output_content
 
 

@@ -12,7 +12,17 @@ from .parser_utils import (
     split_lines,
     split_top_level_comma,
 )
-from .types import PipeModel, PipeNodeModel, PipeParamModel, PipeTokenModel, ResourceFile, SinkKafkaModel, SinkModel, SinkS3Model
+from .types import (
+    PipeModel,
+    PipeNodeModel,
+    PipeParamModel,
+    PipeTokenModel,
+    PipeTypeModel,
+    ResourceFile,
+    SinkKafkaModel,
+    SinkModel,
+    SinkS3Model,
+)
 
 
 PIPE_DIRECTIVES = {
@@ -54,7 +64,9 @@ def _infer_output_columns_from_sql(sql: str) -> list[str]:
     columns: list[str] = []
 
     for expression in expressions:
-        alias = re.search(r"\s+AS\s+`?([a-zA-Z_][a-zA-Z0-9_]*)`?\s*$", expression, flags=re.IGNORECASE)
+        alias = re.search(
+            r"\s+AS\s+`?([a-zA-Z_][a-zA-Z0-9_]*)`?\s*$", expression, flags=re.IGNORECASE
+        )
         if alias:
             columns.append(alias.group(1))
             continue
@@ -143,7 +155,9 @@ def _parse_required_flag(raw_value: str) -> bool:
     raise ValueError(f'Unsupported required value: "{raw_value}"')
 
 
-def _parse_param_options(raw_args: list[str]) -> tuple[str | int | float | bool | None, bool | None, str | None]:
+def _parse_param_options(
+    raw_args: list[str],
+) -> tuple[str | int | float | bool | None, bool | None, str | None]:
     default_value: str | int | float | bool | None = None
     required: bool | None = None
     description: str | None = None
@@ -213,7 +227,11 @@ def _extract_template_function_calls(expression: str) -> list[dict[str, str | in
         full_call = expression[start : start + len(match.group(0))]
         open_paren = full_call.find("(")
         close_paren = full_call.rfind(")")
-        args_raw = full_call[open_paren + 1 : close_paren] if open_paren >= 0 and close_paren > open_paren else ""
+        args_raw = (
+            full_call[open_paren + 1 : close_paren]
+            if open_paren >= 0 and close_paren > open_paren
+            else ""
+        )
 
         calls.append(
             {
@@ -332,7 +350,9 @@ def _infer_params_from_sql(sql: str, file_path: str, resource_name: str) -> list
                 try:
                     default_value, required, description = _parse_param_options(args[1:])
                 except Exception as error:
-                    raise MigrationParseError(file_path, "pipe", resource_name, str(error)) from error
+                    raise MigrationParseError(
+                        file_path, "pipe", resource_name, str(error)
+                    ) from error
 
             existing = params.get(param_name)
             if existing:
@@ -417,7 +437,7 @@ def parse_pipe_file(resource: ResourceFile) -> PipeModel:
     raw_node_sqls: list[str] = []
     tokens: list[PipeTokenModel] = []
     description: str | None = None
-    pipe_type: PipeModel.__annotations__["type"] = "pipe"  # type: ignore[assignment]
+    pipe_type: PipeTypeModel = "pipe"
     cache_ttl: int | None = None
     materialized_datasource: str | None = None
     deployment_method: str | None = None
@@ -447,7 +467,9 @@ def parse_pipe_file(resource: ResourceFile) -> PipeModel:
                 description = "\n".join(block)
             elif nodes:
                 last = nodes[-1]
-                nodes[-1] = PipeNodeModel(name=last.name, sql=last.sql, description="\n".join(block))
+                nodes[-1] = PipeNodeModel(
+                    name=last.name, sql=last.sql, description="\n".join(block)
+                )
             else:
                 raise MigrationParseError(
                     resource.file_path,
@@ -461,7 +483,9 @@ def parse_pipe_file(resource: ResourceFile) -> PipeModel:
         if line.startswith("NODE "):
             node_name = line[len("NODE ") :].strip()
             if not node_name:
-                raise MigrationParseError(resource.file_path, "pipe", resource.name, "NODE directive requires a name.")
+                raise MigrationParseError(
+                    resource.file_path, "pipe", resource.name, "NODE directive requires a name."
+                )
 
             i += 1
             i = _next_non_blank(lines, i)
@@ -496,11 +520,17 @@ def parse_pipe_file(resource: ResourceFile) -> PipeModel:
                     resource.file_path,
                     "pipe",
                     resource.name,
-                    f'Node "{node_name}" has SQL marker '%' but no SQL body.',
+                    f'Node "{node_name}" has SQL marker ' % " but no SQL body.",
                 )
 
             raw_node_sqls.append(sql)
-            nodes.append(PipeNodeModel(name=node_name, description=node_description, sql=_normalize_sql_placeholders(sql)))
+            nodes.append(
+                PipeNodeModel(
+                    name=node_name,
+                    description=node_description,
+                    sql=_normalize_sql_placeholders(sql),
+                )
+            )
             i = next_index
             continue
 
@@ -633,10 +663,14 @@ def parse_pipe_file(resource: ResourceFile) -> PipeModel:
         i += 1
 
     if not nodes:
-        raise MigrationParseError(resource.file_path, "pipe", resource.name, "At least one NODE is required.")
+        raise MigrationParseError(
+            resource.file_path, "pipe", resource.name, "At least one NODE is required."
+        )
 
     if pipe_type != "endpoint" and cache_ttl is not None:
-        raise MigrationParseError(resource.file_path, "pipe", resource.name, "CACHE is only supported for TYPE endpoint.")
+        raise MigrationParseError(
+            resource.file_path, "pipe", resource.name, "CACHE is only supported for TYPE endpoint."
+        )
 
     if pipe_type == "materialized" and not materialized_datasource:
         raise MigrationParseError(
@@ -679,11 +713,22 @@ def parse_pipe_file(resource: ResourceFile) -> PipeModel:
     sink: SinkModel | None = None
     if pipe_type == "sink":
         if not export_connection_name:
-            raise MigrationParseError(resource.file_path, "pipe", resource.name, "EXPORT_CONNECTION_NAME is required for TYPE sink.")
+            raise MigrationParseError(
+                resource.file_path,
+                "pipe",
+                resource.name,
+                "EXPORT_CONNECTION_NAME is required for TYPE sink.",
+            )
 
         has_kafka_directives = export_topic is not None
         has_s3_directives = any(
-            value is not None for value in (export_bucket_uri, export_file_template, export_format, export_compression)
+            value is not None
+            for value in (
+                export_bucket_uri,
+                export_file_template,
+                export_format,
+                export_compression,
+            )
         )
 
         if has_kafka_directives and has_s3_directives:
@@ -694,7 +739,9 @@ def parse_pipe_file(resource: ResourceFile) -> PipeModel:
                 "Sink pipe cannot mix Kafka and S3 export directives.",
             )
 
-        inferred_service = export_service or ("kafka" if has_kafka_directives else "s3" if has_s3_directives else None)
+        inferred_service = export_service or (
+            "kafka" if has_kafka_directives else "s3" if has_s3_directives else None
+        )
         if not inferred_service:
             raise MigrationParseError(
                 resource.file_path,
@@ -754,7 +801,12 @@ def parse_pipe_file(resource: ResourceFile) -> PipeModel:
                     resource.name,
                     "Kafka export directives are not valid for S3 sinks.",
                 )
-            if not export_bucket_uri or not export_file_template or not export_format or not export_schedule:
+            if (
+                not export_bucket_uri
+                or not export_file_template
+                or not export_format
+                or not export_schedule
+            ):
                 raise MigrationParseError(
                     resource.file_path,
                     "pipe",

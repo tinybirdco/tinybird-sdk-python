@@ -68,28 +68,44 @@ class GCSConnectionDefinition:
 ConnectionDefinition = KafkaConnectionDefinition | S3ConnectionDefinition | GCSConnectionDefinition
 
 
-def define_kafka_connection(name: str, options: dict[str, Any] | KafkaConnectionOptions) -> KafkaConnectionDefinition:
+def define_kafka_connection(
+    name: str, options: dict[str, Any] | KafkaConnectionOptions
+) -> KafkaConnectionDefinition:
     _validate_connection_name(name)
-    normalized = options if isinstance(options, KafkaConnectionOptions) else KafkaConnectionOptions(**options)
+    normalized = (
+        options
+        if isinstance(options, KafkaConnectionOptions)
+        else KafkaConnectionOptions(**options)
+    )
     return KafkaConnectionDefinition(_name=name, options=normalized)
 
 
-def define_s3_connection(name: str, options: dict[str, Any] | S3ConnectionOptions) -> S3ConnectionDefinition:
+def define_s3_connection(
+    name: str, options: dict[str, Any] | S3ConnectionOptions
+) -> S3ConnectionDefinition:
     _validate_connection_name(name)
-    normalized = options if isinstance(options, S3ConnectionOptions) else S3ConnectionOptions(**options)
+    normalized = (
+        options if isinstance(options, S3ConnectionOptions) else S3ConnectionOptions(**options)
+    )
 
     if not normalized.arn and not (normalized.access_key and normalized.secret):
         raise ValueError("S3 connection requires either `arn` or both `access_key` and `secret`.")
 
-    if (normalized.access_key and not normalized.secret) or (not normalized.access_key and normalized.secret):
+    if (normalized.access_key and not normalized.secret) or (
+        not normalized.access_key and normalized.secret
+    ):
         raise ValueError("S3 connection `access_key` and `secret` must be provided together.")
 
     return S3ConnectionDefinition(_name=name, options=normalized)
 
 
-def define_gcs_connection(name: str, options: dict[str, Any] | GCSConnectionOptions) -> GCSConnectionDefinition:
+def define_gcs_connection(
+    name: str, options: dict[str, Any] | GCSConnectionOptions
+) -> GCSConnectionDefinition:
     _validate_connection_name(name)
-    normalized = options if isinstance(options, GCSConnectionOptions) else GCSConnectionOptions(**options)
+    normalized = (
+        options if isinstance(options, GCSConnectionOptions) else GCSConnectionOptions(**options)
+    )
 
     if not normalized.service_account_credentials_json.strip():
         raise ValueError("GCS connection `service_account_credentials_json` is required.")
@@ -98,7 +114,9 @@ def define_gcs_connection(name: str, options: dict[str, Any] | GCSConnectionOpti
 
 
 def is_connection_definition(value: Any) -> bool:
-    return isinstance(value, (KafkaConnectionDefinition, S3ConnectionDefinition, GCSConnectionDefinition))
+    return isinstance(
+        value, (KafkaConnectionDefinition, S3ConnectionDefinition, GCSConnectionDefinition)
+    )
 
 
 def is_kafka_connection_definition(value: Any) -> bool:

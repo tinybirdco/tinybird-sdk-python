@@ -34,7 +34,9 @@ def resolve_include_files(include_paths: list[str], cwd: str) -> list[ResolvedIn
 
     for include_path in include_paths:
         if _has_glob(include_path):
-            absolute_pattern = include_path if Path(include_path).is_absolute() else str(base / include_path)
+            absolute_pattern = (
+                include_path if Path(include_path).is_absolute() else str(base / include_path)
+            )
             matches = sorted(glob.glob(absolute_pattern, recursive=True))
             matches = [m for m in matches if Path(m).is_file() and not _is_ignored(Path(m))]
             if not matches:
@@ -45,7 +47,11 @@ def resolve_include_files(include_paths: list[str], cwd: str) -> list[ResolvedIn
                 if key in seen:
                     continue
                 seen.add(key)
-                source = match if Path(include_path).is_absolute() else _normalize(str(Path(match).resolve().relative_to(base)))
+                source = (
+                    match
+                    if Path(include_path).is_absolute()
+                    else _normalize(str(Path(match).resolve().relative_to(base)))
+                )
                 resolved.append(ResolvedIncludeFile(source_path=source, absolute_path=key))
             continue
 
@@ -84,7 +90,9 @@ def get_include_watch_directories(include_paths: list[str], cwd: str) -> list[st
 
     for include_path in include_paths:
         if _has_glob(include_path):
-            absolute_pattern = include_path if Path(include_path).is_absolute() else str(base / include_path)
+            absolute_pattern = (
+                include_path if Path(include_path).is_absolute() else str(base / include_path)
+            )
             pattern = Path(absolute_pattern)
             anchor_parts: list[str] = []
             for part in pattern.parts:

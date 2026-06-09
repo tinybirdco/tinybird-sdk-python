@@ -11,14 +11,19 @@ from tinybird_sdk.infer import (
 def test_infer_helpers() -> None:
     ds = define_datasource(
         "events",
-        {"schema": {"id": t.int32(), "name": t.string()}, "engine": {"type": "MergeTree", "sorting_key": ["id"]}},
+        {
+            "schema": {"id": t.int32(), "name": t.string()},
+            "engine": {"type": "MergeTree", "sorting_key": ["id"]},
+        },
     )
 
     pipe = define_pipe(
         "top_events",
         {
             "params": {"limit": p.int32().optional(10)},
-            "nodes": [node({"name": "n", "sql": "SELECT id, name FROM events LIMIT {{Int32(limit, 10)}}"})],
+            "nodes": [
+                node({"name": "n", "sql": "SELECT id, name FROM events LIMIT {{Int32(limit, 10)}}"})
+            ],
             "output": {"id": t.int32(), "name": t.string()},
             "endpoint": True,
         },

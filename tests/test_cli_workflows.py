@@ -39,12 +39,18 @@ def test_init_build_and_deploy_workflow(tmp_path: Path, monkeypatch: pytest.Monk
     assert build_result.build.stats["datasource_count"] >= 1
     assert build_result.build.stats["pipe_count"] >= 1
 
-    monkeypatch.setattr(deploy_cmd, "deploy_to_main", lambda *_args, **_kwargs: {"success": True, "result": "success"})
+    monkeypatch.setattr(
+        deploy_cmd,
+        "deploy_to_main",
+        lambda *_args, **_kwargs: {"success": True, "result": "success"},
+    )
     deploy_result = run_deploy({"cwd": str(tmp_path), "check": True})
     assert deploy_result.success is True
 
 
-def test_pull_migrate_and_dev_once_workflow(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_pull_migrate_and_dev_once_workflow(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setenv("TINYBIRD_TOKEN", "p.workspace")
     monkeypatch.setenv("TINYBIRD_URL", "https://api.tinybird.co")
 
@@ -95,10 +101,16 @@ def test_pull_migrate_and_dev_once_workflow(tmp_path: Path, monkeypatch: pytest.
         'SCHEMA >\n    id Int32\n\nENGINE "MergeTree"\nENGINE_SORTING_KEY "id"\n',
         encoding="utf-8",
     )
-    migrate_result = run_migrate({"cwd": str(tmp_path), "patterns": ["legacy.datasource"], "dry_run": True})
+    migrate_result = run_migrate(
+        {"cwd": str(tmp_path), "patterns": ["legacy.datasource"], "dry_run": True}
+    )
     assert migrate_result["success"] is True
     assert migrate_result["output_content"] is not None
 
-    monkeypatch.setattr(dev_cmd, "run_build", lambda *_args, **_kwargs: type("R", (), {"success": True, "duration_ms": 1})())
+    monkeypatch.setattr(
+        dev_cmd,
+        "run_build",
+        lambda *_args, **_kwargs: type("R", (), {"success": True, "duration_ms": 1})(),
+    )
     dev_result = dev_cmd.run_dev({"cwd": str(tmp_path), "once": True})
     assert dev_result["success"] is True
