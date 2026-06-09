@@ -4,7 +4,12 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-from .connection import GCSConnectionDefinition, KafkaConnectionDefinition, S3ConnectionDefinition
+from .connection import (
+    DynamoDBConnectionDefinition,
+    GCSConnectionDefinition,
+    KafkaConnectionDefinition,
+    S3ConnectionDefinition,
+)
 from .engines import EngineConfig
 from .token import TokenDefinition
 from .types import TypeValidator
@@ -63,6 +68,13 @@ class GCSConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class DynamoDBConfig:
+    connection: DynamoDBConnectionDefinition
+    table_arn: str
+    export_bucket: str
+
+
+@dataclass(frozen=True, slots=True)
 class DatasourceIndex:
     name: str
     expr: str
@@ -84,6 +96,7 @@ class DatasourceOptions:
     kafka: KafkaConfig | None = None
     s3: S3Config | None = None
     gcs: GCSConfig | None = None
+    dynamodb: DynamoDBConfig | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -120,6 +133,8 @@ def define_datasource(
         s3 = S3Config(**s3_cfg) if isinstance(s3_cfg, dict) else s3_cfg
         gcs_cfg = options.get("gcs")
         gcs = GCSConfig(**gcs_cfg) if isinstance(gcs_cfg, dict) else gcs_cfg
+        dynamodb_cfg = options.get("dynamodb")
+        dynamodb = DynamoDBConfig(**dynamodb_cfg) if isinstance(dynamodb_cfg, dict) else dynamodb_cfg
         normalized = DatasourceOptions(
             description=options.get("description"),
             schema=options["schema"],
@@ -133,15 +148,14 @@ def define_datasource(
             kafka=kafka,
             s3=s3,
             gcs=gcs,
+            dynamodb=dynamodb,
         )
 
     ingestion_count = sum(
-        1 for x in [normalized.kafka, normalized.s3, normalized.gcs] if x is not None
+        1 for x in [normalized.kafka, normalized.s3, normalized.gcs, normalized.dynamodb] if x is not None
     )
     if ingestion_count > 1:
-        raise ValueError(
-            "Datasource can only define one ingestion option: `kafka`, `s3`, or `gcs`."
-        )
+        raise ValueError("Datasource can only define one ingestion option: `kafka`, `s3`, `gcs`, or `dynamodb`.")
 
     if normalized.backfill not in {None, "skip"}:
         raise ValueError('Invalid datasource backfill value: only "skip" is supported.')

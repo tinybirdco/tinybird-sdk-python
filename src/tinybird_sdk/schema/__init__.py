@@ -36,10 +36,12 @@ from .connection import (
     define_kafka_connection,
     define_s3_connection,
     define_gcs_connection,
+    define_dynamodb_connection,
     is_connection_definition,
     is_kafka_connection_definition,
     is_s3_connection_definition,
     is_gcs_connection_definition,
+    is_dynamodb_connection_definition,
     get_connection_type,
     ConnectionDefinition,
     KafkaConnectionDefinition,
@@ -48,6 +50,8 @@ from .connection import (
     S3ConnectionOptions,
     GCSConnectionDefinition,
     GCSConnectionOptions,
+    DynamoDBConnectionDefinition,
+    DynamoDBConnectionOptions,
 )
 from .secret import secret
 from .token import define_token, is_token_definition, TokenDefinition
@@ -109,6 +113,7 @@ __all__ = [
     "define_kafka_connection",
     "define_s3_connection",
     "define_gcs_connection",
+    "define_dynamodb_connection",
     "define_token",
     "secret",
     "sql",

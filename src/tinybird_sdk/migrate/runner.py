@@ -120,6 +120,8 @@ def run_migrate(options: MigrateOptions | dict[str, Any]) -> MigrationResult:
             if datasource.s3
             else datasource.gcs.connection_name
             if datasource.gcs
+            else datasource.dynamodb.connection_name
+            if datasource.dynamodb
             else None
         )
 
@@ -190,6 +192,22 @@ def run_migrate(options: MigrateOptions | dict[str, Any]) -> MigrationResult:
                     s3=replace(cast(DatasourceS3Model, import_config)),
                     gcs=None,
                 )
+
+        if datasource.dynamodb:
+            dynamodb_connection_type = parsed_connection_type_by_name.get(datasource.dynamodb.connection_name)
+            if dynamodb_connection_type != "dynamodb":
+                errors.append(
+                    MigrationError(
+                        file_path=datasource.file_path,
+                        resource_name=datasource.name,
+                        resource_kind=datasource.kind,
+                        message=(
+                            "Datasource dynamodb ingestion requires a dynamodb connection, found "
+                            f'"{dynamodb_connection_type or "(none)"}".'
+                        ),
+                    )
+                )
+                continue
 
         try:
             validate_resource_for_emission(normalized_datasource)

@@ -65,7 +65,23 @@ class GCSConnectionDefinition:
     _connectionType: str = "gcs"
 
 
-ConnectionDefinition = KafkaConnectionDefinition | S3ConnectionDefinition | GCSConnectionDefinition
+@dataclass(frozen=True, slots=True)
+class DynamoDBConnectionOptions:
+    region: str
+    arn: str
+
+
+@dataclass(frozen=True, slots=True)
+class DynamoDBConnectionDefinition:
+    _name: str
+    options: DynamoDBConnectionOptions
+    _type: str = "connection"
+    _connectionType: str = "dynamodb"
+
+
+ConnectionDefinition = (
+    KafkaConnectionDefinition | S3ConnectionDefinition | GCSConnectionDefinition | DynamoDBConnectionDefinition
+)
 
 
 def define_kafka_connection(
@@ -113,9 +129,25 @@ def define_gcs_connection(
     return GCSConnectionDefinition(_name=name, options=normalized)
 
 
+def define_dynamodb_connection(
+    name: str, options: dict[str, Any] | DynamoDBConnectionOptions
+) -> DynamoDBConnectionDefinition:
+    _validate_connection_name(name)
+    normalized = options if isinstance(options, DynamoDBConnectionOptions) else DynamoDBConnectionOptions(**options)
+
+    if not normalized.region.strip():
+        raise ValueError("DynamoDB connection `region` is required.")
+
+    if not normalized.arn.strip():
+        raise ValueError("DynamoDB connection `arn` is required.")
+
+    return DynamoDBConnectionDefinition(_name=name, options=normalized)
+
+
 def is_connection_definition(value: Any) -> bool:
     return isinstance(
-        value, (KafkaConnectionDefinition, S3ConnectionDefinition, GCSConnectionDefinition)
+        value,
+        (KafkaConnectionDefinition, S3ConnectionDefinition, GCSConnectionDefinition, DynamoDBConnectionDefinition),
     )
 
 
@@ -129,6 +161,10 @@ def is_s3_connection_definition(value: Any) -> bool:
 
 def is_gcs_connection_definition(value: Any) -> bool:
     return isinstance(value, GCSConnectionDefinition)
+
+
+def is_dynamodb_connection_definition(value: Any) -> bool:
+    return isinstance(value, DynamoDBConnectionDefinition)
 
 
 def get_connection_type(connection: ConnectionDefinition) -> str:

@@ -516,7 +516,13 @@ Use a local Tinybird container for development without affecting cloud workspace
 ### Connections
 
 ```python
-from tinybird_sdk import define_gcs_connection, define_kafka_connection, define_s3_connection, secret
+from tinybird_sdk import (
+    define_dynamodb_connection,
+    define_gcs_connection,
+    define_kafka_connection,
+    define_s3_connection,
+    secret,
+)
 
 events_kafka = define_kafka_connection(
     "events_kafka",
@@ -541,6 +547,42 @@ landing_gcs = define_gcs_connection(
     "landing_gcs",
     {
         "service_account_credentials_json": secret("GCS_SERVICE_ACCOUNT_CREDENTIALS_JSON"),
+    },
+)
+
+events_dynamodb = define_dynamodb_connection(
+    "events_dynamodb",
+    {
+        "region": "us-east-1",
+        "arn": secret("DYNAMODB_ROLE_ARN"),
+    },
+)
+```
+
+The DynamoDB connector uses an IAM role to authenticate. Reference the connection from
+a datasource to import a DynamoDB table:
+
+```python
+from tinybird_sdk import column, define_datasource, engine, t
+
+orders = define_datasource(
+    "orders",
+    {
+        "schema": {
+            "id": column(t.string(), {"json_path": "$.Item.id"}),
+            "_record": column(t.string(), {"json_path": "$.NewImage"}),
+            "_timestamp": column(t.date_time64(3), {"json_path": "$.ApproximateCreationDateTime"}),
+            "_event_name": column(t.string().low_cardinality(), {"json_path": "$.eventName"}),
+            "_is_deleted": column(t.uint8(), {"json_path": "$._is_deleted"}),
+        },
+        "engine": engine.replacing_merge_tree(
+            {"sorting_key": ["id"], "ver": "_timestamp", "is_deleted": "_is_deleted"}
+        ),
+        "dynamodb": {
+            "connection": events_dynamodb,
+            "table_arn": "arn:aws:dynamodb:us-east-1:123456789012:table/orders",
+            "export_bucket": "s3://my-tinybird-dynamodb-exports",
+        },
     },
 )
 ```

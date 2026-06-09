@@ -79,6 +79,9 @@ def get_engine_clause(config: EngineConfig) -> str:
     if config.type == "ReplacingMergeTree" and config.ver:
         parts.append(f'ENGINE_VER "{config.ver}"')
 
+    if config.type == "ReplacingMergeTree" and config.is_deleted:
+        parts.append(f'ENGINE_IS_DELETED "{config.is_deleted}"')
+
     if config.type in {"CollapsingMergeTree", "VersionedCollapsingMergeTree"} and config.sign:
         parts.append(f'ENGINE_SIGN "{config.sign}"')
 
