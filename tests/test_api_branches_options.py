@@ -6,7 +6,7 @@ from urllib.parse import parse_qs, urlparse
 import pytest
 
 import tinybird_sdk.api.branches as branches_module
-from tinybird_sdk.api.branches import CreateBranchOptions, create_branch
+from tinybird_sdk.api.branches import CreateBranchOptions, clear_branch, create_branch
 
 
 class _FakeResponse:
@@ -67,3 +67,25 @@ def test_create_branch_without_options_keeps_default_query(monkeypatch: pytest.M
     assert query == {"name": ["x"]}
     assert "data" not in query
     assert "ignore_datasources" not in query
+
+
+def test_clear_branch_forwards_create_options(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured_options: list[CreateBranchOptions | None] = []
+
+    monkeypatch.setattr(branches_module, "delete_branch", lambda *_args, **_kwargs: None)
+
+    def fake_create_branch(_config: dict[str, Any], _name: str, options: CreateBranchOptions | None = None) -> Any:
+        captured_options.append(options)
+        return {"id": "b1", "name": "x", "created_at": "2024-01-01T00:00:00Z", "token": "p.test"}
+
+    monkeypatch.setattr(branches_module, "create_branch", fake_create_branch)
+
+    clear_branch(
+        {"base_url": "https://api.tinybird.co", "token": "p.test"},
+        "x",
+        options=CreateBranchOptions(last_partition=True),
+    )
+
+    assert len(captured_options) == 1
+    assert captured_options[0] is not None
+    assert captured_options[0].last_partition is True

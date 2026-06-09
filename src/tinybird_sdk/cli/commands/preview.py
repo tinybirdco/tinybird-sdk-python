@@ -152,11 +152,10 @@ def run_preview(
             pass
 
         branch_options = None
-        branch_value = config.get("branch_data_on_create")
+        branch_value = config.get("branch_data_mode")
         if branch_value and config.get("dev_mode") != "local":
             branch_options = CreateBranchOptions(
                 last_partition=(branch_value == "last_partition"),
-                all_partitions=(branch_value == "all_partitions"),
             )
         branch = create_branch(
             {"base_url": config["base_url"], "token": config["token"]},

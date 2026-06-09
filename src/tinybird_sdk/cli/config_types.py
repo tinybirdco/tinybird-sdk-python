@@ -5,13 +5,12 @@ from enum import StrEnum
 from typing import Literal
 
 DevMode = Literal["branch", "local"]
-BranchDataOnCreate = Literal["last_partition", "all_partitions"]
-BRANCH_DATA_ON_CREATE_VALUES: tuple[str, ...] = ("last_partition", "all_partitions")
+BranchDataMode = Literal["last_partition"]
+BRANCH_DATA_MODE_VALUES: tuple[str, ...] = ("last_partition",)
 
 
-class BranchDataOnCreateMode(StrEnum):
+class BranchDataModeEnum(StrEnum):
     LAST_PARTITION = "last_partition"
-    ALL_PARTITIONS = "all_partitions"
 
 
 @dataclass(frozen=True, slots=True)
@@ -21,4 +20,4 @@ class TinybirdConfig:
     token: str | None = None
     base_url: str | None = None
     dev_mode: DevMode | None = None
-    branch_data_on_create: str | None = None
+    branch_data_mode: str | None = None

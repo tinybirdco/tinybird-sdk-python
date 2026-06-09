@@ -9,8 +9,8 @@ from typing import Any
 
 from .config_loader import load_config_file
 from .config_types import (
-    BRANCH_DATA_ON_CREATE_VALUES,
-    BranchDataOnCreateMode,
+    BRANCH_DATA_MODE_VALUES,
+    BranchDataModeEnum,
     DevMode,
     TinybirdConfig,
 )
@@ -39,26 +39,27 @@ class ResolvedConfig:
     tinybird_branch: str | None
     is_main_branch: bool
     dev_mode: DevMode
-    branch_data_on_create: str | None
+    branch_data_mode: str | None
 
 
-def _resolve_branch_data_on_create(raw: dict[str, Any]) -> str | None:
-    value = raw.get("branch_data_on_create")
+def _resolve_branch_data_mode(raw: dict[str, Any]) -> tuple[str | None, bool]:
+    if "branch_data_on_create" in raw:
+        raise ValueError("`branch_data_on_create` has been renamed to `branch_data_mode`.")
+
+    value = raw.get("branch_data_mode")
     if value is None:
-        return BranchDataOnCreateMode.LAST_PARTITION.value
+        return BranchDataModeEnum.LAST_PARTITION.value, False
     if not isinstance(value, str):
-        raise ValueError("branch_data_on_create must be a string.")
+        raise ValueError("branch_data_mode must be a string.")
 
     mode = value.strip().lower()
     if not mode:
-        return BranchDataOnCreateMode.LAST_PARTITION.value
-    if mode not in BRANCH_DATA_ON_CREATE_VALUES:
+        return BranchDataModeEnum.LAST_PARTITION.value, False
+    if mode not in BRANCH_DATA_MODE_VALUES:
         raise ValueError(
-            f"Invalid branch_data_on_create '{value}'. Allowed values are: {', '.join(BRANCH_DATA_ON_CREATE_VALUES)}."
+            f"Invalid branch_data_mode '{value}'. Allowed values are: {', '.join(BRANCH_DATA_MODE_VALUES)}."
         )
-    if mode == BranchDataOnCreateMode.ALL_PARTITIONS.value:
-        raise ValueError("branch_data_on_create 'all_partitions' is currently disabled.")
-    return mode
+    return mode, True
 
 
 def load_env_files(directory: str) -> None:
@@ -201,11 +202,11 @@ def _resolve_config(config: TinybirdConfig, config_path: str) -> ResolvedConfig:
         or DEFAULT_BASE_URL
     )
 
-    branch_data_on_create = _resolve_branch_data_on_create(asdict(config))
+    branch_data_mode, branch_data_mode_explicit = _resolve_branch_data_mode(asdict(config))
     dev_mode = config.dev_mode or "branch"
-    if branch_data_on_create and dev_mode == "local":
+    if branch_data_mode_explicit and branch_data_mode and dev_mode == "local":
         print(
-            "Warning: branch_data_on_create is set in tinybird.config.json but dev_mode='local'. "
+            "Warning: branch_data_mode is set in tinybird.config.json but dev_mode='local'. "
             "Branch data settings only apply to cloud branches."
         )
 
@@ -219,7 +220,7 @@ def _resolve_config(config: TinybirdConfig, config_path: str) -> ResolvedConfig:
         tinybird_branch=get_tinybird_branch_name(),
         is_main_branch=is_main_branch(),
         dev_mode=dev_mode,
-        branch_data_on_create=branch_data_on_create,
+        branch_data_mode=branch_data_mode,
     )
 
 

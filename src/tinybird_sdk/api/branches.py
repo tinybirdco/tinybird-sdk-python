@@ -7,7 +7,6 @@ from urllib.parse import urlencode
 
 from .fetcher import tinybird_fetch
 LAST_PARTITION = "last_partition"
-ALL_PARTITIONS = "all_partitions"
 
 LAST_PARTITION = "last_partition"
 
@@ -29,7 +28,6 @@ class TinybirdBranch:
 @dataclass(frozen=True, slots=True)
 class CreateBranchOptions:
     last_partition: bool = False
-    all_partitions: bool = False
 
 
 class BranchApiError(Exception):
@@ -82,8 +80,6 @@ def create_branch(
     params = {"name": name}
     if options and options.last_partition:
         params["data"] = LAST_PARTITION
-    elif options and options.all_partitions:
-        params["data"] = ALL_PARTITIONS
     url = f"{normalized.base_url.rstrip('/')}/v1/environments?{urlencode(params)}"
     response = tinybird_fetch(url, method="POST", headers=_headers(normalized.token))
 
@@ -180,7 +176,9 @@ def get_or_create_branch(
         raise
 
 
-def clear_branch(config: BranchApiConfig | dict[str, Any], name: str) -> TinybirdBranch:
+def clear_branch(
+    config: BranchApiConfig | dict[str, Any], name: str, options: CreateBranchOptions | None = None
+) -> TinybirdBranch:
     normalized = config if isinstance(config, BranchApiConfig) else BranchApiConfig(**config)
     delete_branch(normalized, name)
-    return create_branch(normalized, name)
+    return create_branch(normalized, name, options=options)

@@ -4,7 +4,7 @@ from dataclasses import asdict
 from typing import Any, cast
 
 from ..api.api import TinybirdApi, TinybirdApiError
-from ..api.branches import get_or_create_branch
+from ..api.branches import CreateBranchOptions, get_or_create_branch
 from ..cli.config import load_config_async
 from .preview import get_preview_branch_name, is_preview_environment
 from .tokens import TokensNamespace
@@ -159,12 +159,18 @@ class TinybirdClient:
                 )
 
             branch_name = config["tinybird_branch"]
+            branch_options = None
+            branch_value = config.get("branch_data_mode")
+            if branch_value and config.get("dev_mode") != "local":
+                branch_options = CreateBranchOptions(last_partition=(branch_value == "last_partition"))
+
             branch = get_or_create_branch(
                 {
                     "base_url": self._config["base_url"],
                     "token": self._config["token"],
                 },
                 branch_name,
+                options=branch_options,
             )
 
             if not branch.get("token"):

@@ -5,7 +5,7 @@ import os
 import time
 from typing import Any
 
-from ...api.branches import clear_branch
+from ...api.branches import CreateBranchOptions, clear_branch
 from ...api.local import clear_local_workspace, get_local_tokens, get_local_workspace_name
 from ..config import load_config_async
 
@@ -60,8 +60,15 @@ def run_clear(options: ClearCommandOptions | dict[str, Any] | None = None) -> Cl
                 duration_ms=int(time.time() * 1000) - start,
             )
 
+        branch_options = None
+        branch_value = config.get("branch_data_mode")
+        if branch_value and config.get("dev_mode") != "local":
+            branch_options = CreateBranchOptions(last_partition=(branch_value == "last_partition"))
+
         clear_branch(
-            {"base_url": config["base_url"], "token": config["token"]}, config["tinybird_branch"]
+            {"base_url": config["base_url"], "token": config["token"]},
+            config["tinybird_branch"],
+            options=branch_options,
         )
         return ClearResult(
             success=True,
