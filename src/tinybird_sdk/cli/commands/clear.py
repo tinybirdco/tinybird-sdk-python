@@ -60,7 +60,9 @@ def run_clear(options: ClearCommandOptions | dict[str, Any] | None = None) -> Cl
                 duration_ms=int(time.time() * 1000) - start,
             )
 
-        clear_branch({"base_url": config["base_url"], "token": config["token"]}, config["tinybird_branch"])
+        clear_branch(
+            {"base_url": config["base_url"], "token": config["token"]}, config["tinybird_branch"]
+        )
         return ClearResult(
             success=True,
             branch=config["tinybird_branch"],

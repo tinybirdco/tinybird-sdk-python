@@ -151,7 +151,9 @@ def run_preview(
         except Exception:
             pass
 
-        branch = create_branch({"base_url": config["base_url"], "token": config["token"]}, preview_branch_name)
+        branch = create_branch(
+            {"base_url": config["base_url"], "token": config["token"]}, preview_branch_name
+        )
     except Exception as error:
         return PreviewCommandResult(
             success=False,
