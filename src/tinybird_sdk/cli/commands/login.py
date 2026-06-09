@@ -26,7 +26,9 @@ class LoginResult:
 
 
 def run_login(options: RunLoginOptions | dict[str, Any] | None = None) -> LoginResult:
-    normalized = options if isinstance(options, RunLoginOptions) else RunLoginOptions(**(options or {}))
+    normalized = (
+        options if isinstance(options, RunLoginOptions) else RunLoginOptions(**(options or {}))
+    )
     result = browser_login({"api_host": normalized.api_host} if normalized.api_host else {})
     if not result.success:
         return LoginResult(success=False, error=result.error)

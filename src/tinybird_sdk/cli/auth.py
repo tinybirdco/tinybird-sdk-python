@@ -73,7 +73,7 @@ def browser_login(options: dict[str, str] | None = None) -> AuthResult:
     done = Event()
 
     class Handler(BaseHTTPRequestHandler):
-        def do_GET(self):  # type: ignore[override]
+        def do_GET(self):
             parsed = urlparse(self.path)
             query = parse_qs(parsed.query)
             code = (query.get("code") or [None])[0]
@@ -108,7 +108,9 @@ def browser_login(options: dict[str, str] | None = None) -> AuthResult:
 
     if not done.wait(timeout=SERVER_MAX_WAIT_TIME):
         server.server_close()
-        return AuthResult(success=False, error=f"Authentication timed out after {SERVER_MAX_WAIT_TIME} seconds")
+        return AuthResult(
+            success=False, error=f"Authentication timed out after {SERVER_MAX_WAIT_TIME} seconds"
+        )
 
     server.server_close()
     code = code_holder.get("code")

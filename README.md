@@ -11,6 +11,14 @@ Define your datasources, pipes, and queries in Python and sync them directly to 
 pip install tinybird-sdk
 ```
 
+## Development
+
+```bash
+uv sync --group dev
+uv run pre-commit install
+make check
+```
+
 ## Requirements
 
 - Python `>=3.11`

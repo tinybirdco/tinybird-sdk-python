@@ -38,21 +38,31 @@ def generate_preview_branch_name(git_branch: str | None) -> str:
     return f"tmp_ci_{branch_part}"
 
 
-def run_preview(options: PreviewCommandOptions | dict[str, Any] | None = None) -> PreviewCommandResult:
+def run_preview(
+    options: PreviewCommandOptions | dict[str, Any] | None = None,
+) -> PreviewCommandResult:
     start = int(time.time() * 1000)
-    normalized = options if isinstance(options, PreviewCommandOptions) else PreviewCommandOptions(**(options or {}))
+    normalized = (
+        options
+        if isinstance(options, PreviewCommandOptions)
+        else PreviewCommandOptions(**(options or {}))
+    )
     cwd = normalized.cwd or os.getcwd()
 
     try:
         config = load_config_async(cwd)
     except Exception as error:
-        return PreviewCommandResult(success=False, error=str(error), duration_ms=int(time.time() * 1000) - start)
+        return PreviewCommandResult(
+            success=False, error=str(error), duration_ms=int(time.time() * 1000) - start
+        )
 
     git_branch = get_current_git_branch()
     preview_branch_name = normalized.name or generate_preview_branch_name(git_branch)
 
     try:
-        build_result = build_from_include({"include_paths": config["include"], "cwd": config["cwd"]})
+        build_result = build_from_include(
+            {"include_paths": config["include"], "cwd": config["cwd"]}
+        )
     except Exception as error:
         return PreviewCommandResult(
             success=False,
@@ -119,19 +129,31 @@ def run_preview(options: PreviewCommandOptions | dict[str, Any] | None = None) -
                 duration_ms=int(time.time() * 1000) - start,
             )
         except LocalNotRunningError as error:
-            return PreviewCommandResult(success=False, error=str(error), duration_ms=int(time.time() * 1000) - start)
+            return PreviewCommandResult(
+                success=False, error=str(error), duration_ms=int(time.time() * 1000) - start
+            )
         except Exception as error:
-            return PreviewCommandResult(success=False, error=f"Local preview failed: {error}", duration_ms=int(time.time() * 1000) - start)
+            return PreviewCommandResult(
+                success=False,
+                error=f"Local preview failed: {error}",
+                duration_ms=int(time.time() * 1000) - start,
+            )
 
     try:
         try:
-            existing = get_branch({"base_url": config["base_url"], "token": config["token"]}, preview_branch_name)
+            existing = get_branch(
+                {"base_url": config["base_url"], "token": config["token"]}, preview_branch_name
+            )
             if existing:
-                delete_branch({"base_url": config["base_url"], "token": config["token"]}, preview_branch_name)
+                delete_branch(
+                    {"base_url": config["base_url"], "token": config["token"]}, preview_branch_name
+                )
         except Exception:
             pass
 
-        branch = create_branch({"base_url": config["base_url"], "token": config["token"]}, preview_branch_name)
+        branch = create_branch(
+            {"base_url": config["base_url"], "token": config["token"]}, preview_branch_name
+        )
     except Exception as error:
         return PreviewCommandResult(
             success=False,
@@ -197,4 +219,9 @@ def run_preview(options: PreviewCommandOptions | dict[str, Any] | None = None) -
     )
 
 
-__all__ = ["PreviewCommandOptions", "PreviewCommandResult", "generate_preview_branch_name", "run_preview"]
+__all__ = [
+    "PreviewCommandOptions",
+    "PreviewCommandResult",
+    "generate_preview_branch_name",
+    "run_preview",
+]

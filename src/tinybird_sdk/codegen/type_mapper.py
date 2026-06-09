@@ -97,7 +97,9 @@ def clickhouse_type_to_validator(ch_type: str) -> str:
 
     agg = re.match(r"^AggregateFunction\((\w+),\s*(.+)\)$", ch_type)
     if agg:
-        return f't.aggregate_function("{agg.group(1)}", {clickhouse_type_to_validator(agg.group(2))})'
+        return (
+            f't.aggregate_function("{agg.group(1)}", {clickhouse_type_to_validator(agg.group(2))})'
+        )
 
     if ch_type.startswith("Nested("):
         return "t.json()"
@@ -105,7 +107,9 @@ def clickhouse_type_to_validator(ch_type: str) -> str:
     return f"t.string()  # TODO: Unknown type: {ch_type}"
 
 
-def param_type_to_validator(param_type: str, default_value: str | int | None = None, required: bool = True) -> str:
+def param_type_to_validator(
+    param_type: str, default_value: str | int | None = None, required: bool = True
+) -> str:
     param_type = param_type.strip()
     mapping = {
         "String": "p.string()",

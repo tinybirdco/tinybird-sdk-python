@@ -43,7 +43,9 @@ def test_run_installed_tinybird_cli_maps_system_exit_code(monkeypatch: pytest.Mo
     assert cli_index._run_installed_tinybird_cli(["build"]) == 5
 
 
-def test_run_installed_tinybird_cli_errors_when_dependency_missing(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_run_installed_tinybird_cli_errors_when_dependency_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     _mute_output(monkeypatch)
     real_import = builtins.__import__
 
@@ -57,7 +59,11 @@ def test_run_installed_tinybird_cli_errors_when_dependency_missing(monkeypatch: 
 
 
 def test_cli_entrypoint_delegates_non_sdk_commands(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(cli_index, "_run_installed_tinybird_cli", lambda argv: 7 if argv == ["build", "--dry-run"] else 1)
+    monkeypatch.setattr(
+        cli_index,
+        "_run_installed_tinybird_cli",
+        lambda argv: 7 if argv == ["build", "--dry-run"] else 1,
+    )
     monkeypatch.setattr(
         cli_index,
         "run_generate",
@@ -73,16 +79,22 @@ def test_cli_entrypoint_delegates_non_sdk_commands(monkeypatch: pytest.MonkeyPat
 
 def test_cli_entrypoint_delegates_empty_argv(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[list[str]] = []
-    monkeypatch.setattr(cli_index, "_run_installed_tinybird_cli", lambda argv: calls.append(list(argv)) or 0)
+    monkeypatch.setattr(
+        cli_index, "_run_installed_tinybird_cli", lambda argv: calls.append(list(argv)) or 0
+    )
     assert cli_index.main([]) == 0
     assert calls == [[]]
 
 
-def test_cli_entrypoint_runs_generate_locally(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+def test_cli_entrypoint_runs_generate_locally(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
     monkeypatch.setattr(
         cli_index,
         "_run_installed_tinybird_cli",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("should not delegate generate")),
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("should not delegate generate")
+        ),
     )
     monkeypatch.setattr(
         cli_index,
@@ -106,11 +118,15 @@ def test_cli_entrypoint_runs_generate_locally(monkeypatch: pytest.MonkeyPatch, c
     assert "Generated 2 resources (1 datasources, 1 pipes, 0 connections)" in out
 
 
-def test_cli_entrypoint_runs_migrate_locally(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+def test_cli_entrypoint_runs_migrate_locally(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
     monkeypatch.setattr(
         cli_index,
         "_run_installed_tinybird_cli",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("should not delegate migrate")),
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("should not delegate migrate")
+        ),
     )
     monkeypatch.setattr(
         cli_index,
@@ -131,11 +147,15 @@ def test_cli_entrypoint_runs_migrate_locally(monkeypatch: pytest.MonkeyPatch, ca
     assert "Written to: /tmp/tinybird.migration.py" in out
 
 
-def test_cli_entrypoint_runs_generate_json_output(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+def test_cli_entrypoint_runs_generate_json_output(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
     monkeypatch.setattr(
         cli_index,
         "_run_installed_tinybird_cli",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("should not delegate generate")),
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("should not delegate generate")
+        ),
     )
     monkeypatch.setattr(
         cli_index,
@@ -163,7 +183,9 @@ def test_cli_entrypoint_generate_failure_returns_error(monkeypatch: pytest.Monke
     monkeypatch.setattr(
         cli_index,
         "_run_installed_tinybird_cli",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("should not delegate generate")),
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("should not delegate generate")
+        ),
     )
     monkeypatch.setattr(
         cli_index,
@@ -178,7 +200,9 @@ def test_cli_entrypoint_migrate_failure_returns_error(monkeypatch: pytest.Monkey
     monkeypatch.setattr(
         cli_index,
         "_run_installed_tinybird_cli",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("should not delegate migrate")),
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("should not delegate migrate")
+        ),
     )
     monkeypatch.setattr(
         cli_index,

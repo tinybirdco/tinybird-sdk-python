@@ -46,10 +46,20 @@ def get_local_tokens() -> LocalTokens:
     try:
         response = tinybird_fetch(f"{LOCAL_BASE_URL}/tokens", method="GET", timeout=5)
         if not response.ok:
-            raise LocalApiError(f"Failed to get local tokens: {response.status_code}", response.status_code, response.text)
+            raise LocalApiError(
+                f"Failed to get local tokens: {response.status_code}",
+                response.status_code,
+                response.text,
+            )
         data = response.json()
-        if not data.get("user_token") or not data.get("admin_token") or not data.get("workspace_admin_token"):
-            raise LocalApiError("Invalid tokens response from local Tinybird - missing required fields")
+        if (
+            not data.get("user_token")
+            or not data.get("admin_token")
+            or not data.get("workspace_admin_token")
+        ):
+            raise LocalApiError(
+                "Invalid tokens response from local Tinybird - missing required fields"
+            )
         return LocalTokens(**data)
     except LocalApiError:
         raise
@@ -64,7 +74,11 @@ def list_local_workspaces(admin_token: str) -> dict[str, Any]:
     query = urlencode({"with_organization": "true", "token": admin_token})
     response = tinybird_fetch(f"{LOCAL_BASE_URL}/v1/user/workspaces?{query}", method="GET")
     if not response.ok:
-        raise LocalApiError(f"Failed to list local workspaces: {response.status_code}", response.status_code, response.text)
+        raise LocalApiError(
+            f"Failed to list local workspaces: {response.status_code}",
+            response.status_code,
+            response.text,
+        )
     data = response.json()
     return {
         "workspaces": [LocalWorkspace(**workspace) for workspace in data.get("workspaces", [])],
@@ -72,7 +86,9 @@ def list_local_workspaces(admin_token: str) -> dict[str, Any]:
     }
 
 
-def create_local_workspace(user_token: str, workspace_name: str, organization_id: str | None = None) -> LocalWorkspace:
+def create_local_workspace(
+    user_token: str, workspace_name: str, organization_id: str | None = None
+) -> LocalWorkspace:
     body = {"name": workspace_name}
     if organization_id:
         body["assign_to_organization_id"] = organization_id
@@ -99,7 +115,9 @@ def get_or_create_local_workspace(tokens: LocalTokens, workspace_name: str) -> d
     listed = list_local_workspaces(tokens.admin_token)
     workspaces: list[LocalWorkspace] = listed["workspaces"]
 
-    existing = next((workspace for workspace in workspaces if workspace.name == workspace_name), None)
+    existing = next(
+        (workspace for workspace in workspaces if workspace.name == workspace_name), None
+    )
     if existing:
         return {"workspace": existing, "was_created": False}
 
@@ -108,7 +126,9 @@ def get_or_create_local_workspace(tokens: LocalTokens, workspace_name: str) -> d
     refreshed = list_local_workspaces(tokens.admin_token)["workspaces"]
     created = next((workspace for workspace in refreshed if workspace.name == workspace_name), None)
     if not created:
-        raise LocalApiError(f"Created workspace '{workspace_name}' but could not find it in workspace list")
+        raise LocalApiError(
+            f"Created workspace '{workspace_name}' but could not find it in workspace list"
+        )
 
     return {"workspace": created, "was_created": True}
 
@@ -139,7 +159,9 @@ def clear_local_workspace(tokens: LocalTokens, workspace_name: str) -> LocalWork
     listed = list_local_workspaces(tokens.admin_token)
     workspaces: list[LocalWorkspace] = listed["workspaces"]
 
-    current = next((workspace for workspace in workspaces if workspace.name == workspace_name), None)
+    current = next(
+        (workspace for workspace in workspaces if workspace.name == workspace_name), None
+    )
     if not current:
         raise LocalApiError(f"Workspace '{workspace_name}' not found")
 
@@ -147,8 +169,12 @@ def clear_local_workspace(tokens: LocalTokens, workspace_name: str) -> LocalWork
     create_local_workspace(tokens.user_token, workspace_name, listed.get("organization_id"))
 
     refreshed = list_local_workspaces(tokens.admin_token)["workspaces"]
-    recreated = next((workspace for workspace in refreshed if workspace.name == workspace_name), None)
+    recreated = next(
+        (workspace for workspace in refreshed if workspace.name == workspace_name), None
+    )
     if not recreated:
-        raise LocalApiError(f"Workspace '{workspace_name}' was not recreated properly. Please try again.")
+        raise LocalApiError(
+            f"Workspace '{workspace_name}' was not recreated properly. Please try again."
+        )
 
     return recreated

@@ -31,11 +31,22 @@ def build_to_tinybird(
 
     files: list[tuple[str, str, bytes, str | None]] = []
     for ds in resources.datasources:
-        files.append(("data_project://", f"{ds.name}.datasource", ds.content.encode("utf-8"), "text/plain"))
+        files.append(
+            ("data_project://", f"{ds.name}.datasource", ds.content.encode("utf-8"), "text/plain")
+        )
     for pipe in resources.pipes:
-        files.append(("data_project://", f"{pipe.name}.pipe", pipe.content.encode("utf-8"), "text/plain"))
+        files.append(
+            ("data_project://", f"{pipe.name}.pipe", pipe.content.encode("utf-8"), "text/plain")
+        )
     for conn in resources.connections:
-        files.append(("data_project://", f"{conn.name}.connection", conn.content.encode("utf-8"), "text/plain"))
+        files.append(
+            (
+                "data_project://",
+                f"{conn.name}.connection",
+                conn.content.encode("utf-8"),
+                "text/plain",
+            )
+        )
 
     content_type, body = create_multipart_body(files=files)
     url = f"{normalized.base_url.rstrip('/')}/v1/build"

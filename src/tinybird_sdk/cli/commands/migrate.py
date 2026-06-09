@@ -17,7 +17,9 @@ class MigrateCommandOptions:
 
 
 def run_migrate_command(options: MigrateCommandOptions | dict[str, Any]) -> dict[str, Any]:
-    normalized = options if isinstance(options, MigrateCommandOptions) else MigrateCommandOptions(**options)
+    normalized = (
+        options if isinstance(options, MigrateCommandOptions) else MigrateCommandOptions(**options)
+    )
     result = run_migrate_runner(
         {
             "cwd": normalized.cwd,

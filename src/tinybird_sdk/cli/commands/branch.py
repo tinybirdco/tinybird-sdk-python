@@ -37,8 +37,14 @@ class BranchDeleteResult:
     error: str | None = None
 
 
-def run_branch_list(options: BranchCommandOptions | dict[str, Any] | None = None) -> BranchListResult:
-    normalized = options if isinstance(options, BranchCommandOptions) else BranchCommandOptions(**(options or {}))
+def run_branch_list(
+    options: BranchCommandOptions | dict[str, Any] | None = None,
+) -> BranchListResult:
+    normalized = (
+        options
+        if isinstance(options, BranchCommandOptions)
+        else BranchCommandOptions(**(options or {}))
+    )
     try:
         config = load_config_async(normalized.cwd or os.getcwd())
         branches = list_branches({"base_url": config["base_url"], "token": config["token"]})
@@ -47,21 +53,35 @@ def run_branch_list(options: BranchCommandOptions | dict[str, Any] | None = None
         return BranchListResult(success=False, branches=[], error=str(error))
 
 
-def run_branch_status(branch_name: str | None = None, options: BranchCommandOptions | dict[str, Any] | None = None) -> BranchStatusResult:
-    normalized = options if isinstance(options, BranchCommandOptions) else BranchCommandOptions(**(options or {}))
+def run_branch_status(
+    branch_name: str | None = None, options: BranchCommandOptions | dict[str, Any] | None = None
+) -> BranchStatusResult:
+    normalized = (
+        options
+        if isinstance(options, BranchCommandOptions)
+        else BranchCommandOptions(**(options or {}))
+    )
     try:
         config = load_config_async(normalized.cwd or os.getcwd())
         target = branch_name or config.get("tinybird_branch")
         if not target:
-            return BranchStatusResult(success=False, error="No branch name provided and no tinybird_branch detected")
+            return BranchStatusResult(
+                success=False, error="No branch name provided and no tinybird_branch detected"
+            )
         branch = get_branch({"base_url": config["base_url"], "token": config["token"]}, target)
         return BranchStatusResult(success=True, branch=asdict(branch))
     except Exception as error:
         return BranchStatusResult(success=False, error=str(error))
 
 
-def run_branch_delete(branch_name: str, options: BranchCommandOptions | dict[str, Any] | None = None) -> BranchDeleteResult:
-    normalized = options if isinstance(options, BranchCommandOptions) else BranchCommandOptions(**(options or {}))
+def run_branch_delete(
+    branch_name: str, options: BranchCommandOptions | dict[str, Any] | None = None
+) -> BranchDeleteResult:
+    normalized = (
+        options
+        if isinstance(options, BranchCommandOptions)
+        else BranchCommandOptions(**(options or {}))
+    )
     try:
         config = load_config_async(normalized.cwd or os.getcwd())
         delete_branch({"base_url": config["base_url"], "token": config["token"]}, branch_name)
@@ -77,8 +97,14 @@ def run_branch_delete(branch_name: str, options: BranchCommandOptions | dict[str
         return BranchDeleteResult(success=False, deleted=False, error=str(error))
 
 
-def run_branch_list_cached(options: BranchCommandOptions | dict[str, Any] | None = None) -> BranchListResult:
-    normalized = options if isinstance(options, BranchCommandOptions) else BranchCommandOptions(**(options or {}))
+def run_branch_list_cached(
+    options: BranchCommandOptions | dict[str, Any] | None = None,
+) -> BranchListResult:
+    normalized = (
+        options
+        if isinstance(options, BranchCommandOptions)
+        else BranchCommandOptions(**(options or {}))
+    )
     try:
         config = load_config_async(normalized.cwd or os.getcwd())
         workspace = get_workspace({"base_url": config["base_url"], "token": config["token"]})

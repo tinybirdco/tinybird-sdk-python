@@ -24,7 +24,13 @@ from .branches import (
     clear_branch,
 )
 from .workspaces import TinybirdWorkspace, WorkspaceApiConfig, WorkspaceApiError, get_workspace
-from .dashboard import parse_api_url, get_dashboard_url, get_branch_dashboard_url, get_local_dashboard_url, RegionInfo
+from .dashboard import (
+    parse_api_url,
+    get_dashboard_url,
+    get_branch_dashboard_url,
+    get_local_dashboard_url,
+    RegionInfo,
+)
 from .tokens import create_jwt, TokenApiConfig, TokenApiError
 from .resources import (
     ResourceApiError,

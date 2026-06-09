@@ -172,11 +172,15 @@ class _TypeFactory:
         return TypeValidator(dict, "JSON")
 
     def enum8(self, *values: str) -> TypeValidator:
-        mapping = ", ".join(f"'{self._escape_enum_value(v)}' = {idx + 1}" for idx, v in enumerate(values))
+        mapping = ", ".join(
+            f"'{self._escape_enum_value(v)}' = {idx + 1}" for idx, v in enumerate(values)
+        )
         return TypeValidator(str, f"Enum8({mapping})")
 
     def enum16(self, *values: str) -> TypeValidator:
-        mapping = ", ".join(f"'{self._escape_enum_value(v)}' = {idx + 1}" for idx, v in enumerate(values))
+        mapping = ", ".join(
+            f"'{self._escape_enum_value(v)}' = {idx + 1}" for idx, v in enumerate(values)
+        )
         return TypeValidator(str, f"Enum16({mapping})")
 
     def ipv4(self) -> TypeValidator:

@@ -62,6 +62,8 @@ def create_jwt(config: TokenApiConfig | dict[str, Any], options: dict[str, Any])
         elif error.status_code == 400:
             message = f"Invalid JWT token request: {response_body}"
         else:
-            message = f"Failed to create JWT token: {error.status_code}. API response: {response_body}"
+            message = (
+                f"Failed to create JWT token: {error.status_code}. API response: {response_body}"
+            )
 
         raise TokenApiError(message, error.status_code, response_body) from error

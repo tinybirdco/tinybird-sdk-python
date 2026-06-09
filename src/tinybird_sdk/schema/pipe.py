@@ -159,7 +159,9 @@ def _types_are_compatible(output_type: str, datasource_type: str) -> bool:
     return False
 
 
-def _validate_materialized_schema(pipe_name: str, output: OutputDefinition, datasource: DatasourceDefinition) -> None:
+def _validate_materialized_schema(
+    pipe_name: str, output: OutputDefinition, datasource: DatasourceDefinition
+) -> None:
     output_columns = list(output.keys())
     datasource_columns = list(datasource._schema.keys())
 
@@ -196,12 +198,25 @@ def define_pipe(name: str, options: dict[str, Any] | PipeOptions) -> PipeDefinit
     if not normalized.nodes:
         raise ValueError(f'Pipe "{name}" must have at least one node.')
 
-    if (normalized.endpoint or normalized.materialized) and (not normalized.output or len(normalized.output) == 0):
+    if (normalized.endpoint or normalized.materialized) and (
+        not normalized.output or len(normalized.output) == 0
+    ):
         raise ValueError(
             f'Pipe "{name}" must have an output schema defined when used as an endpoint or materialized view.'
         )
 
-    type_count = len([x for x in (normalized.endpoint, normalized.materialized, normalized.copy, normalized.sink) if x])
+    type_count = len(
+        [
+            x
+            for x in (
+                normalized.endpoint,
+                normalized.materialized,
+                normalized.copy,
+                normalized.sink,
+            )
+            if x
+        ]
+    )
     if type_count > 1:
         raise ValueError(
             f'Pipe "{name}" can only have one of: endpoint, materialized, copy, or sink configuration. A pipe must be at most one type.'
@@ -284,7 +299,7 @@ def _normalize_sink_config(raw: dict[str, Any]) -> SinkConfig:
             strategy=raw.get("strategy"),
             compression=raw.get("compression"),
         )
-    raise ValueError(f"Sink connection must be a Kafka or S3 connection definition.")
+    raise ValueError("Sink connection must be a Kafka or S3 connection definition.")
 
 
 def define_sink_pipe(name: str, options: dict[str, Any]) -> PipeDefinition:

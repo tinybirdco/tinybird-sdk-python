@@ -130,7 +130,9 @@ def test_append_requires_either_url_or_file() -> None:
         api.append_datasource("events", {})
 
 
-def test_ingest_does_not_retry_503_when_max_retries_is_undefined(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_ingest_does_not_retry_503_when_max_retries_is_undefined(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     attempts = 0
 
     def fake_fetch(_url: str, **_kwargs: Any) -> _FakeResponse:
@@ -232,7 +234,9 @@ def test_ingest_stops_retrying_after_max_retries_for_503(monkeypatch: pytest.Mon
 
 
 def test_ingest_raises_for_invalid_max_retries(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(api_module, "tinybird_fetch", lambda *_args, **_kwargs: _FakeResponse(200, {}))
+    monkeypatch.setattr(
+        api_module, "tinybird_fetch", lambda *_args, **_kwargs: _FakeResponse(200, {})
+    )
 
     api = TinybirdApi({"base_url": "https://api.tinybird.co", "token": "p.token"})
     with pytest.raises(ValueError, match="'maxRetries' must be a finite number"):

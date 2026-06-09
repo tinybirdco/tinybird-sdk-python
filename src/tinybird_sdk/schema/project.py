@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 import os
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, cast
 
 from .datasource import DatasourceDefinition
 from .pipe import PipeDefinition, get_endpoint_config
@@ -57,7 +57,13 @@ class _DatasourceAccessor:
 
 
 class _PipeAccessor:
-    def __init__(self, get_client: Callable[[], TinybirdClient], pipe_key: str, pipe_name: str, endpoint_enabled: bool):
+    def __init__(
+        self,
+        get_client: Callable[[], TinybirdClient],
+        pipe_key: str,
+        pipe_name: str,
+        endpoint_enabled: bool,
+    ):
         self._get_client = get_client
         self._pipe_key = pipe_key
         self._pipe_name = pipe_name
@@ -68,7 +74,7 @@ class _PipeAccessor:
             raise ValueError(
                 f'Pipe "{self._pipe_key}" is not exposed as an endpoint. Set "endpoint: true" in the pipe definition to enable querying.'
             )
-        return self._get_client().query(self._pipe_name, params or {})
+        return cast("QueryResult", self._get_client().query(self._pipe_name, params or {}))
 
 
 class Tinybird:
@@ -178,7 +184,7 @@ class Tinybird:
         return self.__client
 
     def sql(self, sql_query: str, options: dict[str, Any] | None = None) -> QueryResult:
-        return self.__get_client().sql(sql_query, options or {})
+        return cast("QueryResult", self.__get_client().sql(sql_query, options or {}))
 
 
 @dataclass(frozen=True, slots=True)

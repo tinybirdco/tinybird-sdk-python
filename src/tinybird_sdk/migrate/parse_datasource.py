@@ -81,7 +81,9 @@ def _find_token_outside_contexts(input_value: str, token: str) -> int:
 
 def _normalize_column_name(value: str) -> str:
     trimmed = value.strip()
-    if (trimmed.startswith("`") and trimmed.endswith("`")) or (trimmed.startswith('"') and trimmed.endswith('"')):
+    if (trimmed.startswith("`") and trimmed.endswith("`")) or (
+        trimmed.startswith('"') and trimmed.endswith('"')
+    ):
         return trimmed[1:-1]
     return trimmed
 
@@ -198,7 +200,11 @@ def _parse_token(file_path: str, resource_name: str, value: str) -> DatasourceTo
         )
 
     raw_name, scope = parts
-    name = raw_name[1:-1] if raw_name.startswith('"') and raw_name.endswith('"') and len(raw_name) >= 2 else raw_name
+    name = (
+        raw_name[1:-1]
+        if raw_name.startswith('"') and raw_name.endswith('"') and len(raw_name) >= 2
+        else raw_name
+    )
     if scope not in {"READ", "APPEND"}:
         raise MigrationParseError(
             file_path,
@@ -215,7 +221,9 @@ def _parse_index_line(file_path: str, resource_name: str, raw_line: str) -> Data
     if not line:
         raise MigrationParseError(file_path, "datasource", resource_name, "Empty INDEXES line.")
 
-    match = re.fullmatch(r"(\S+)\s+(.+?)\s+TYPE\s+(.+?)\s+GRANULARITY\s+(\d+)", line, flags=re.IGNORECASE)
+    match = re.fullmatch(
+        r"(\S+)\s+(.+?)\s+TYPE\s+(.+?)\s+GRANULARITY\s+(\d+)", line, flags=re.IGNORECASE
+    )
     if not match:
         raise MigrationParseError(
             file_path,
@@ -286,7 +294,9 @@ def parse_datasource_file(resource: ResourceFile) -> DatasourceModel:
         if line == "DESCRIPTION >":
             block, next_index = _read_indented_block(lines, i + 1)
             if not block:
-                raise MigrationParseError(resource.file_path, "datasource", resource.name, "DESCRIPTION block is empty.")
+                raise MigrationParseError(
+                    resource.file_path, "datasource", resource.name, "DESCRIPTION block is empty."
+                )
             description = "\n".join(block)
             i = next_index
             continue
@@ -294,7 +304,9 @@ def parse_datasource_file(resource: ResourceFile) -> DatasourceModel:
         if line == "SCHEMA >":
             block, next_index = _read_indented_block(lines, i + 1)
             if not block:
-                raise MigrationParseError(resource.file_path, "datasource", resource.name, "SCHEMA block is empty.")
+                raise MigrationParseError(
+                    resource.file_path, "datasource", resource.name, "SCHEMA block is empty."
+                )
             for schema_line in block:
                 if is_blank(schema_line) or schema_line.strip().startswith("#"):
                     continue
@@ -305,7 +317,9 @@ def parse_datasource_file(resource: ResourceFile) -> DatasourceModel:
         if line == "INDEXES >":
             block, next_index = _read_indented_block(lines, i + 1)
             if not block:
-                raise MigrationParseError(resource.file_path, "datasource", resource.name, "INDEXES block is empty.")
+                raise MigrationParseError(
+                    resource.file_path, "datasource", resource.name, "INDEXES block is empty."
+                )
             for index_line in block:
                 if is_blank(index_line) or index_line.strip().startswith("#"):
                     continue
@@ -316,7 +330,9 @@ def parse_datasource_file(resource: ResourceFile) -> DatasourceModel:
         if line == "FORWARD_QUERY >":
             block, next_index = _read_indented_block(lines, i + 1)
             if not block:
-                raise MigrationParseError(resource.file_path, "datasource", resource.name, "FORWARD_QUERY block is empty.")
+                raise MigrationParseError(
+                    resource.file_path, "datasource", resource.name, "FORWARD_QUERY block is empty."
+                )
             forward_query = "\n".join(block)
             i = next_index
             continue
@@ -358,7 +374,9 @@ def parse_datasource_file(resource: ResourceFile) -> DatasourceModel:
             try:
                 settings = _parse_engine_settings(value)
             except Exception as error:
-                raise MigrationParseError(resource.file_path, "datasource", resource.name, str(error)) from error
+                raise MigrationParseError(
+                    resource.file_path, "datasource", resource.name, str(error)
+                ) from error
         elif key == "KAFKA_CONNECTION_NAME":
             kafka_connection_name = value.strip()
         elif key == "KAFKA_TOPIC":
@@ -418,7 +436,9 @@ def parse_datasource_file(resource: ResourceFile) -> DatasourceModel:
         i += 1
 
     if not columns:
-        raise MigrationParseError(resource.file_path, "datasource", resource.name, "SCHEMA block is required.")
+        raise MigrationParseError(
+            resource.file_path, "datasource", resource.name, "SCHEMA block is required."
+        )
 
     has_engine_directives = (
         len(sorting_key) > 0
@@ -436,7 +456,12 @@ def parse_datasource_file(resource: ResourceFile) -> DatasourceModel:
         engine_type = "MergeTree"
 
     if engine_type and not sorting_key:
-        raise MigrationParseError(resource.file_path, "datasource", resource.name, "ENGINE_SORTING_KEY directive is required.")
+        raise MigrationParseError(
+            resource.file_path,
+            "datasource",
+            resource.name,
+            "ENGINE_SORTING_KEY directive is required.",
+        )
 
     kafka: DatasourceKafkaModel | None = None
     if (

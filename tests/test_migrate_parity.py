@@ -17,7 +17,9 @@ def test_discover_resource_files_from_directory_fixture() -> None:
 
 def test_parse_resource_file_kinds() -> None:
     fixture_dir = Path("tests/fixtures/migrate/input").resolve()
-    discovered = discover_resource_files(["*.connection", "*.datasource", "*.pipe"], str(fixture_dir))
+    discovered = discover_resource_files(
+        ["*.connection", "*.datasource", "*.pipe"], str(fixture_dir)
+    )
     assert discovered.errors == []
 
     parsed = [parse_resource_file(item) for item in discovered.resources]

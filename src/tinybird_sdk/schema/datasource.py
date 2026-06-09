@@ -97,7 +97,9 @@ class DatasourceDefinition:
         return self.options.schema
 
 
-def define_datasource(name: str, options: dict[str, Any] | DatasourceOptions) -> DatasourceDefinition:
+def define_datasource(
+    name: str, options: dict[str, Any] | DatasourceOptions
+) -> DatasourceDefinition:
     if not NAME_PATTERN.match(name):
         raise ValueError(
             f'Invalid datasource name: "{name}". Must start with a letter or underscore and contain only alphanumeric characters and underscores.'
@@ -133,9 +135,13 @@ def define_datasource(name: str, options: dict[str, Any] | DatasourceOptions) ->
             gcs=gcs,
         )
 
-    ingestion_count = sum(1 for x in [normalized.kafka, normalized.s3, normalized.gcs] if x is not None)
+    ingestion_count = sum(
+        1 for x in [normalized.kafka, normalized.s3, normalized.gcs] if x is not None
+    )
     if ingestion_count > 1:
-        raise ValueError("Datasource can only define one ingestion option: `kafka`, `s3`, or `gcs`.")
+        raise ValueError(
+            "Datasource can only define one ingestion option: `kafka`, `s3`, or `gcs`."
+        )
 
     if normalized.backfill not in {None, "skip"}:
         raise ValueError('Invalid datasource backfill value: only "skip" is supported.')
@@ -149,7 +155,11 @@ def define_datasource(name: str, options: dict[str, Any] | DatasourceOptions) ->
             raise ValueError(f'Invalid datasource index "{index.name}": expr is required.')
         if not index.type.strip():
             raise ValueError(f'Invalid datasource index "{index.name}": type is required.')
-        if isinstance(index.granularity, bool) or not isinstance(index.granularity, int) or index.granularity <= 0:
+        if (
+            isinstance(index.granularity, bool)
+            or not isinstance(index.granularity, int)
+            or index.granularity <= 0
+        ):
             raise ValueError(
                 f'Invalid datasource index "{index.name}": granularity must be a positive integer.'
             )

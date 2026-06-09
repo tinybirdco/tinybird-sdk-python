@@ -18,7 +18,11 @@ def test_region_selector_prefers_env_match(monkeypatch: pytest.MonkeyPatch) -> N
         "fetch_regions",
         lambda: [
             TinybirdRegion(name="EU (GCP)", api_host="https://api.tinybird.co", provider="gcp"),
-            TinybirdRegion(name="US East (AWS)", api_host="https://api.us-east-1.aws.tinybird.co", provider="aws"),
+            TinybirdRegion(
+                name="US East (AWS)",
+                api_host="https://api.us-east-1.aws.tinybird.co",
+                provider="aws",
+            ),
         ],
     )
     monkeypatch.setenv("TINYBIRD_REGION", "US East (AWS)")

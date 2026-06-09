@@ -3,7 +3,10 @@ from __future__ import annotations
 from pathlib import Path
 
 from tinybird_sdk.generator.client import generate_client_file
-from tinybird_sdk.generator.include_paths import get_include_watch_directories, resolve_include_files
+from tinybird_sdk.generator.include_paths import (
+    get_include_watch_directories,
+    resolve_include_files,
+)
 from tinybird_sdk.generator.index import build_from_include
 from tinybird_sdk.generator.loader import load_entities
 
@@ -51,7 +54,7 @@ def test_load_entities_and_build_from_include_with_raw_datafiles(tmp_path: Path)
     datasources, pipes = _write_schema_files(tmp_path)
     raw_datasource = tmp_path / "legacy.datasource"
     raw_pipe = tmp_path / "legacy.pipe"
-    raw_datasource.write_text("SCHEMA >\n    id Int32\n_engine \"MergeTree\"\n", encoding="utf-8")
+    raw_datasource.write_text('SCHEMA >\n    id Int32\n_engine "MergeTree"\n', encoding="utf-8")
     raw_pipe.write_text("NODE endpoint\n_sql >\n    %\n    SELECT 1 as id\n", encoding="utf-8")
 
     entities = load_entities(

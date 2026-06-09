@@ -163,7 +163,9 @@ def _fetch_text_from_any_endpoint(config: WorkspaceApiConfig, endpoints: list[st
             continue
         return _handle_text_response(response, endpoint)
 
-    raise last_not_found or ResourceApiError("Resource not found", 404, endpoints[0] if endpoints else "unknown")
+    raise last_not_found or ResourceApiError(
+        "Resource not found", 404, endpoints[0] if endpoints else "unknown"
+    )
 
 
 def list_datasources(config: WorkspaceApiConfig | dict[str, Any]) -> list[str]:
@@ -205,9 +207,15 @@ def get_datasource(config: WorkspaceApiConfig | dict[str, Any], name: str) -> Da
         ],
         engine=DatasourceEngine(
             type=_parse_engine_type(engine.get("engine")),
-            sorting_key=engine.get("sorting_key") or engine.get("engine_sorting_key") or payload.get("sorting_key"),
-            partition_key=engine.get("partition_key") or engine.get("engine_partition_key") or payload.get("partition_key"),
-            primary_key=engine.get("primary_key") or engine.get("engine_primary_key") or payload.get("primary_key"),
+            sorting_key=engine.get("sorting_key")
+            or engine.get("engine_sorting_key")
+            or payload.get("sorting_key"),
+            partition_key=engine.get("partition_key")
+            or engine.get("engine_partition_key")
+            or payload.get("partition_key"),
+            primary_key=engine.get("primary_key")
+            or engine.get("engine_primary_key")
+            or payload.get("primary_key"),
             ttl=payload.get("ttl"),
             ver=engine.get("engine_ver"),
             sign=engine.get("engine_sign"),
@@ -371,7 +379,9 @@ def fetch_all_resources(config: WorkspaceApiConfig | dict[str, Any]) -> dict[str
     }
 
 
-def pull_all_resource_files(config: WorkspaceApiConfig | dict[str, Any]) -> dict[str, list[ResourceFile]]:
+def pull_all_resource_files(
+    config: WorkspaceApiConfig | dict[str, Any],
+) -> dict[str, list[ResourceFile]]:
     normalized = config if isinstance(config, WorkspaceApiConfig) else WorkspaceApiConfig(**config)
     datasource_names = list_datasources(normalized)
     pipe_names = list_pipes_v1(normalized)

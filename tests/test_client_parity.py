@@ -24,7 +24,9 @@ def test_client_query_and_api_error_mapping(monkeypatch: pytest.MonkeyPatch) -> 
         def __init__(self, config: dict[str, Any]):
             self.config = config
 
-        def query(self, pipe_name: str, params: dict[str, Any], options: dict[str, Any]) -> dict[str, Any]:
+        def query(
+            self, pipe_name: str, params: dict[str, Any], options: dict[str, Any]
+        ) -> dict[str, Any]:
             if pipe_name == "boom":
                 raise TinybirdApiError("boom", 500, '{"error":"boom"}', {"error": "boom"})
             return {"data": [{"ok": True}], "pipe": pipe_name, "params": params}
@@ -75,7 +77,9 @@ def test_tokens_namespace_wraps_token_api_errors(monkeypatch: pytest.MonkeyPatch
     monkeypatch.setattr(
         client_tokens,
         "create_jwt",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(TokenApiError("not allowed", 403, {"error": "x"})),
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            TokenApiError("not allowed", 403, {"error": "x"})
+        ),
     )
 
     client = TinybirdClient({"base_url": "https://api.tinybird.co", "token": "workspace_token"})

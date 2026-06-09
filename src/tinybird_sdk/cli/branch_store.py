@@ -42,14 +42,22 @@ def save_branch_store(store: dict[str, Any]) -> None:
 
 def get_branch_token(workspace_id: str, branch_name: str) -> BranchInfo | None:
     store = load_branch_store()
-    info = (((store.get("workspaces") or {}).get(workspace_id) or {}).get("branches") or {}).get(branch_name)
+    info = (((store.get("workspaces") or {}).get(workspace_id) or {}).get("branches") or {}).get(
+        branch_name
+    )
     if not info:
         return None
     return BranchInfo(id=info["id"], token=info["token"], created_at=info["created_at"])
 
 
-def set_branch_token(workspace_id: str, branch_name: str, info: BranchInfo | dict[str, str]) -> None:
-    payload = info if isinstance(info, dict) else {"id": info.id, "token": info.token, "created_at": info.created_at}
+def set_branch_token(
+    workspace_id: str, branch_name: str, info: BranchInfo | dict[str, str]
+) -> None:
+    payload = (
+        info
+        if isinstance(info, dict)
+        else {"id": info.id, "token": info.token, "created_at": info.created_at}
+    )
 
     store = load_branch_store()
     workspaces = store.setdefault("workspaces", {})
@@ -62,7 +70,7 @@ def set_branch_token(workspace_id: str, branch_name: str, info: BranchInfo | dic
 def remove_branch(workspace_id: str, branch_name: str) -> None:
     store = load_branch_store()
     workspaces = store.get("workspaces") or {}
-    branches = ((workspaces.get(workspace_id) or {}).get("branches") or {})
+    branches = (workspaces.get(workspace_id) or {}).get("branches") or {}
     if branch_name in branches:
         del branches[branch_name]
         save_branch_store(store)
@@ -70,7 +78,7 @@ def remove_branch(workspace_id: str, branch_name: str) -> None:
 
 def list_cached_branches(workspace_id: str) -> dict[str, BranchInfo]:
     store = load_branch_store()
-    branches = (((store.get("workspaces") or {}).get(workspace_id) or {}).get("branches") or {})
+    branches = ((store.get("workspaces") or {}).get(workspace_id) or {}).get("branches") or {}
     result: dict[str, BranchInfo] = {}
     for name, info in branches.items():
         result[name] = BranchInfo(id=info["id"], token=info["token"], created_at=info["created_at"])

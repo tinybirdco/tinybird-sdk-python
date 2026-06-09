@@ -10,7 +10,9 @@ import tinybird_sdk.cli.commands.pull as pull_cmd
 
 
 class _FakeResponse:
-    def __init__(self, status_code: int, payload: dict[str, Any] | None = None, text: str | None = None):
+    def __init__(
+        self, status_code: int, payload: dict[str, Any] | None = None, text: str | None = None
+    ):
         self.status_code = status_code
         self._payload = payload or {}
         self._text = text if text is not None else ""
@@ -44,7 +46,9 @@ def test_pull_all_resource_files_includes_connections(monkeypatch: pytest.Monkey
         return _FakeResponse(404)
 
     monkeypatch.setattr(resources, "tinybird_fetch", fake_fetch)
-    pulled = resources.pull_all_resource_files({"base_url": "https://api.tinybird.co", "token": "p.token"})
+    pulled = resources.pull_all_resource_files(
+        {"base_url": "https://api.tinybird.co", "token": "p.token"}
+    )
 
     assert len(pulled["datasources"]) == 1
     assert len(pulled["pipes"]) == 1
@@ -61,10 +65,14 @@ def test_list_pipes_v1_falls_back_to_v0(monkeypatch: pytest.MonkeyPatch) -> None
         return _FakeResponse(404)
 
     monkeypatch.setattr(resources, "tinybird_fetch", fake_fetch)
-    assert resources.list_pipes_v1({"base_url": "https://api.tinybird.co", "token": "p.token"}) == ["top_events"]
+    assert resources.list_pipes_v1({"base_url": "https://api.tinybird.co", "token": "p.token"}) == [
+        "top_events"
+    ]
 
 
-def test_run_pull_writes_datasource_pipe_and_connection(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_run_pull_writes_datasource_pipe_and_connection(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setattr(
         pull_cmd,
         "load_config_async",
@@ -139,7 +147,9 @@ def test_run_pull_respects_overwrite_flag(tmp_path: Path, monkeypatch: pytest.Mo
     target = out / "events.datasource"
     target.write_text("old-content", encoding="utf-8")
 
-    not_overwritten = pull_cmd.run_pull({"cwd": str(tmp_path), "output_dir": "out", "overwrite": False})
+    not_overwritten = pull_cmd.run_pull(
+        {"cwd": str(tmp_path), "output_dir": "out", "overwrite": False}
+    )
     assert not_overwritten.success is False
     assert not_overwritten.error is not None
     assert "File already exists" in not_overwritten.error

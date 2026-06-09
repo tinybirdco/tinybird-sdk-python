@@ -122,7 +122,9 @@ def generate_engine_code(engine: dict[str, str | None]) -> str:
     if engine.get("type") == "ReplacingMergeTree" and engine.get("ver"):
         options.append(f"'ver': {engine['ver']!r}")
 
-    if engine.get("type") in {"CollapsingMergeTree", "VersionedCollapsingMergeTree"} and engine.get("sign"):
+    if engine.get("type") in {"CollapsingMergeTree", "VersionedCollapsingMergeTree"} and engine.get(
+        "sign"
+    ):
         options.append(f"'sign': {engine['sign']!r}")
 
     if engine.get("type") == "VersionedCollapsingMergeTree" and engine.get("version"):

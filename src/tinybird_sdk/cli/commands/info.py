@@ -32,18 +32,26 @@ class InfoCommandResult:
 
 
 def run_info(options: InfoCommandOptions | dict[str, Any] | None = None) -> InfoCommandResult:
-    normalized = options if isinstance(options, InfoCommandOptions) else InfoCommandOptions(**(options or {}))
+    normalized = (
+        options
+        if isinstance(options, InfoCommandOptions)
+        else InfoCommandOptions(**(options or {}))
+    )
     cwd = normalized.cwd or os.getcwd()
 
     if not config_exists(cwd):
-        return InfoCommandResult(success=False, error="No Tinybird config found in current directory tree")
+        return InfoCommandResult(
+            success=False, error="No Tinybird config found in current directory tree"
+        )
 
     try:
         config = load_config_async(cwd)
         workspace = get_workspace({"base_url": config["base_url"], "token": config["token"]})
         branches = list_branches({"base_url": config["base_url"], "token": config["token"]})
 
-        datasource_names = list_datasources({"base_url": config["base_url"], "token": config["token"]})
+        datasource_names = list_datasources(
+            {"base_url": config["base_url"], "token": config["token"]}
+        )
         pipe_names = list_pipes({"base_url": config["base_url"], "token": config["token"]})
 
         project_info = {

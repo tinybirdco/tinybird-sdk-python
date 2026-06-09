@@ -47,7 +47,9 @@ class TinybirdApiError(Exception):
 
 class TinybirdApi:
     def __init__(self, config: TinybirdApiConfig | dict[str, Any]):
-        normalized = config if isinstance(config, TinybirdApiConfig) else TinybirdApiConfig(**config)
+        normalized = (
+            config if isinstance(config, TinybirdApiConfig) else TinybirdApiConfig(**config)
+        )
 
         if not normalized.base_url:
             raise ValueError("base_url is required")
@@ -185,13 +187,17 @@ class TinybirdApi:
             if response.ok:
                 return response.json()
 
-            retry_429_delay_ms = self._resolve_retry_429_delay_ms(response.status_code, response.headers, max_retries, retry_count)
+            retry_429_delay_ms = self._resolve_retry_429_delay_ms(
+                response.status_code, response.headers, max_retries, retry_count
+            )
             if retry_429_delay_ms is not None:
                 self._sleep_ms(retry_429_delay_ms)
                 retry_count += 1
                 continue
 
-            retry_503_delay_ms = self._resolve_retry_503_delay_ms(response.status_code, max_retries, retry_count)
+            retry_503_delay_ms = self._resolve_retry_503_delay_ms(
+                response.status_code, max_retries, retry_count
+            )
             if retry_503_delay_ms is not None:
                 self._sleep_ms(retry_503_delay_ms)
                 retry_count += 1
@@ -233,7 +239,10 @@ class TinybirdApi:
             "mode": api_options.get("mode", "append"),
         }
 
-        detected_format = detect_data_format(source_url or file_path)
+        source_url_str = source_url if isinstance(source_url, str) else None
+        file_path_str = file_path if isinstance(file_path, str) else None
+        source_ref = source_url_str or file_path_str
+        detected_format = detect_data_format(source_ref) if source_ref else None
         if detected_format:
             query["format"] = detected_format
 
@@ -247,8 +256,8 @@ class TinybirdApi:
 
         timeout = options.get("timeout", api_options.get("timeout"))
 
-        if source_url:
-            body = urlencode({"url": source_url})
+        if source_url_str:
+            body = urlencode({"url": source_url_str})
             response = self.request(
                 f"/v0/datasources?{urlencode(query)}",
                 method="POST",
@@ -258,10 +267,12 @@ class TinybirdApi:
                 timeout=timeout,
             )
         else:
-            with open(file_path, "rb") as fp:
+            if not file_path_str:
+                raise ValueError("'file' must be a valid string path")
+            with open(file_path_str, "rb") as fp:
                 file_content = fp.read()
             content_type, multipart = create_multipart_body(
-                files=[("csv", file_path, file_content, None)],
+                files=[("csv", file_path_str, file_content, None)],
             )
             response = self.request(
                 f"/v0/datasources?{urlencode(query)}",
@@ -370,7 +381,11 @@ class TinybirdApi:
             value = options.get("max_retries")
         if value is None:
             return None
-        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+        if (
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not math.isfinite(value)
+        ):
             raise ValueError("'maxRetries' must be a finite number")
         return max(0, math.floor(value))
 
@@ -385,7 +400,9 @@ class TinybirdApi:
             return None
         return self._resolve_retry_delay_from_headers(headers)
 
-    def _resolve_retry_503_delay_ms(self, status_code: int, max_retries: int | None, retry_count: int) -> int | None:
+    def _resolve_retry_503_delay_ms(
+        self, status_code: int, max_retries: int | None, retry_count: int
+    ) -> int | None:
         if max_retries is None or status_code != 503 or retry_count >= max_retries:
             return None
         return self._calculate_retry_503_delay_ms(retry_count)
@@ -410,7 +427,11 @@ class TinybirdApi:
                 return value
 
         for key, value in dict(headers).items():
-            if isinstance(key, str) and key.lower() == header_name.lower() and isinstance(value, str):
+            if (
+                isinstance(key, str)
+                and key.lower() == header_name.lower()
+                and isinstance(value, str)
+            ):
                 return value
         return None
 

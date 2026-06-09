@@ -60,7 +60,7 @@ top_pages = define_endpoint("top_pages", {
 
 
 def _client_template(resources_import_path: str) -> str:
-    return f'''import os
+    return f"""import os
 
 from tinybird_sdk import Tinybird
 from {resources_import_path} import page_views, top_pages
@@ -73,11 +73,11 @@ tinybird = Tinybird(
         "token": os.getenv("TINYBIRD_TOKEN"),
     }}
 )
-'''
+"""
 
 
 def _main_template(client_import_path: str) -> str:
-    return f'''from datetime import datetime, timezone
+    return f"""from datetime import datetime, timezone
 
 from dotenv import load_dotenv
 
@@ -114,7 +114,7 @@ def main():
 
 if __name__ == "__main__":
     main()
-'''
+"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -150,7 +150,7 @@ def _write_file(path: Path, content: str, force: bool) -> None:
 
 def _run_tinybird_cli_init(argv: list[str]) -> int:
     try:
-        from tinybird.tb.cli import cli as upstream_cli  # type: ignore[import-not-found]
+        from tinybird.tb.cli import cli as upstream_cli
     except ModuleNotFoundError:
         return 1
 

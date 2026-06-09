@@ -39,7 +39,9 @@ class DevController:
 
 
 def run_dev(options: DevCommandOptions | dict[str, Any] | None = None) -> dict[str, Any]:
-    normalized = options if isinstance(options, DevCommandOptions) else DevCommandOptions(**(options or {}))
+    normalized = (
+        options if isinstance(options, DevCommandOptions) else DevCommandOptions(**(options or {}))
+    )
     cwd = normalized.cwd or os.getcwd()
 
     config = load_config_async(cwd)

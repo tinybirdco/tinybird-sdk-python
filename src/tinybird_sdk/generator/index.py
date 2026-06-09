@@ -3,7 +3,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from ..schema.project import ConnectionsDefinition, DatasourcesDefinition, PipesDefinition, ProjectDefinition
+from ..schema.project import (
+    ConnectionsDefinition,
+    DatasourcesDefinition,
+    PipesDefinition,
+    ProjectDefinition,
+)
 from .client import GenerateClientOptions, GeneratedClient, generate_client_file
 from .connection import GeneratedConnection, generate_all_connections
 from .datasource import GeneratedDatasource, generate_all_datasources
@@ -95,7 +100,11 @@ def generate_resources_from_entities(
 
 
 def build_from_include(options: BuildFromIncludeOptions | dict[str, Any]) -> BuildFromIncludeResult:
-    normalized = options if isinstance(options, BuildFromIncludeOptions) else BuildFromIncludeOptions(**options)
+    normalized = (
+        options
+        if isinstance(options, BuildFromIncludeOptions)
+        else BuildFromIncludeOptions(**options)
+    )
 
     entities = load_entities(
         LoadEntitiesOptions(include_paths=normalized.include_paths, cwd=normalized.cwd)

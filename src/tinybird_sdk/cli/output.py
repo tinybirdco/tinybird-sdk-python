@@ -98,7 +98,9 @@ def show_build_errors(errors: list[dict[str, str]]) -> None:
 
 
 def show_build_success(duration_ms: int, is_rebuild: bool = False) -> None:
-    success(f"\n✓ {'Rebuild' if is_rebuild else 'Build'} completed in {format_duration(duration_ms)}")
+    success(
+        f"\n✓ {'Rebuild' if is_rebuild else 'Build'} completed in {format_duration(duration_ms)}"
+    )
 
 
 def show_build_failure(is_rebuild: bool = False) -> None:

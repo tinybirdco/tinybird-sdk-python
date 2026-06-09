@@ -81,7 +81,9 @@ def _strict_param_base_validator(type_name: str) -> str:
     return validator
 
 
-def _apply_param_optional(base_validator: str, required: bool, default_value: str | int | float | bool | None) -> str:
+def _apply_param_optional(
+    base_validator: str, required: bool, default_value: str | int | float | bool | None
+) -> str:
     if required and default_value is None:
         return base_validator
 
@@ -118,7 +120,9 @@ def _emit_engine_options(engine_model: Any) -> str:
     if len(engine.sorting_key) == 1:
         options.append(f"'sorting_key': {_escape_string(engine.sorting_key[0])}")
     else:
-        options.append(f"'sorting_key': [{', '.join(_escape_string(v) for v in engine.sorting_key)}]")
+        options.append(
+            f"'sorting_key': [{', '.join(_escape_string(v) for v in engine.sorting_key)}]"
+        )
 
     if engine.partition_key:
         options.append(f"'partition_key': {_escape_string(engine.partition_key)}")
@@ -126,7 +130,9 @@ def _emit_engine_options(engine_model: Any) -> str:
         if len(engine.primary_key) == 1:
             options.append(f"'primary_key': {_escape_string(engine.primary_key[0])}")
         else:
-            options.append(f"'primary_key': [{', '.join(_escape_string(v) for v in engine.primary_key)}]")
+            options.append(
+                f"'primary_key': [{', '.join(_escape_string(v) for v in engine.primary_key)}]"
+            )
     if engine.ttl:
         options.append(f"'ttl': {_escape_string(engine.ttl)}")
     if engine.ver:
@@ -138,7 +144,9 @@ def _emit_engine_options(engine_model: Any) -> str:
     if engine.version:
         options.append(f"'version': {_escape_string(engine.version)}")
     if engine.summing_columns:
-        options.append(f"'columns': [{', '.join(_escape_string(v) for v in engine.summing_columns)}]")
+        options.append(
+            f"'columns': [{', '.join(_escape_string(v) for v in engine.summing_columns)}]"
+        )
     if engine.settings:
         settings_entries = []
         for key, value in engine.settings.items():
@@ -224,7 +232,9 @@ def _emit_datasource(ds: DatasourceModel) -> str:
         if ds.kafka.group_id:
             lines.append(f"        'group_id': {_escape_string(ds.kafka.group_id)},")
         if ds.kafka.auto_offset_reset:
-            lines.append(f"        'auto_offset_reset': {_escape_string(ds.kafka.auto_offset_reset)},")
+            lines.append(
+                f"        'auto_offset_reset': {_escape_string(ds.kafka.auto_offset_reset)},"
+            )
         if ds.kafka.store_raw_value is not None:
             lines.append(f"        'store_raw_value': {ds.kafka.store_raw_value},")
         lines.append("    },")
@@ -265,7 +275,9 @@ def _emit_datasource(ds: DatasourceModel) -> str:
         lines.append("    ],")
 
     if ds.shared_with:
-        lines.append(f"    'shared_with': [{', '.join(_escape_string(v) for v in ds.shared_with)}],")
+        lines.append(
+            f"    'shared_with': [{', '.join(_escape_string(v) for v in ds.shared_with)}],"
+        )
 
     lines.append("})")
     lines.append("")
@@ -286,7 +298,9 @@ def _emit_kafka_connection(connection: KafkaConnectionModel) -> str:
     if connection.secret:
         lines.append(f"    'secret': {_escape_string(connection.secret)},")
     if connection.schema_registry_url:
-        lines.append(f"    'schema_registry_url': {_escape_string(connection.schema_registry_url)},")
+        lines.append(
+            f"    'schema_registry_url': {_escape_string(connection.schema_registry_url)},"
+        )
     if connection.ssl_ca_pem:
         lines.append(f"    'ssl_ca_pem': {_escape_string(connection.ssl_ca_pem)},")
     lines.append("})")
@@ -314,13 +328,17 @@ def _emit_gcs_connection(connection: GCSConnectionModel) -> str:
     variable_name = to_snake_case(connection.name)
     lines: list[str] = []
     lines.append(f"{variable_name} = define_gcs_connection({_escape_string(connection.name)}, {{")
-    lines.append(f"    'service_account_credentials_json': {_escape_string(connection.service_account_credentials_json)},")
+    lines.append(
+        f"    'service_account_credentials_json': {_escape_string(connection.service_account_credentials_json)},"
+    )
     lines.append("})")
     lines.append("")
     return "\n".join(lines)
 
 
-def _emit_connection(connection: KafkaConnectionModel | S3ConnectionModel | GCSConnectionModel) -> str:
+def _emit_connection(
+    connection: KafkaConnectionModel | S3ConnectionModel | GCSConnectionModel,
+) -> str:
     if isinstance(connection, S3ConnectionModel):
         return _emit_s3_connection(connection)
     if isinstance(connection, GCSConnectionModel):
@@ -403,7 +421,9 @@ def _emit_pipe(pipe: PipeModel) -> str:
 
     if pipe.type == "endpoint":
         if pipe.cache_ttl is not None:
-            lines.append(f"    'endpoint': {{'enabled': True, 'cache': {{'enabled': True, 'ttl': {pipe.cache_ttl}}}}},")
+            lines.append(
+                f"    'endpoint': {{'enabled': True, 'cache': {{'enabled': True, 'ttl': {pipe.cache_ttl}}}}},"
+            )
         else:
             lines.append("    'endpoint': True,")
         lines.append("    'output': {")

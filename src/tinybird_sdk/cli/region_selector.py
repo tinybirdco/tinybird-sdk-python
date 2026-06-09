@@ -10,7 +10,9 @@ from ..api.regions import TinybirdRegion, fetch_regions
 
 FALLBACK_REGIONS: list[TinybirdRegion] = [
     TinybirdRegion(name="EU (GCP)", api_host="https://api.tinybird.co", provider="gcp"),
-    TinybirdRegion(name="US East (AWS)", api_host="https://api.us-east-1.aws.tinybird.co", provider="aws"),
+    TinybirdRegion(
+        name="US East (AWS)", api_host="https://api.us-east-1.aws.tinybird.co", provider="aws"
+    ),
 ]
 
 
@@ -34,15 +36,28 @@ def select_region(default_api_host: str | None = None) -> RegionSelectionResult:
     regions = sorted(regions, key=lambda region: (region.provider != "gcp", region.name))
 
     if default_api_host:
-        match = next((region for region in regions if region.api_host.rstrip("/") == default_api_host.rstrip("/")), None)
+        match = next(
+            (
+                region
+                for region in regions
+                if region.api_host.rstrip("/") == default_api_host.rstrip("/")
+            ),
+            None,
+        )
         if match:
-            return RegionSelectionResult(success=True, api_host=match.api_host, region_name=match.name)
+            return RegionSelectionResult(
+                success=True, api_host=match.api_host, region_name=match.name
+            )
 
     env_region = os.getenv("TINYBIRD_REGION")
     if env_region:
-        match = next((region for region in regions if env_region in {region.name, region.api_host}), None)
+        match = next(
+            (region for region in regions if env_region in {region.name, region.api_host}), None
+        )
         if match:
-            return RegionSelectionResult(success=True, api_host=match.api_host, region_name=match.name)
+            return RegionSelectionResult(
+                success=True, api_host=match.api_host, region_name=match.name
+            )
 
     # Non-interactive default selection.
     chosen = regions[0]

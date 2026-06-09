@@ -51,7 +51,11 @@ from .git import (
     get_tinybird_branch_name,
 )
 from .output import ResourceChange, output
-from .region_selector import RegionSelectionResult, get_api_host_with_region_selection, select_region
+from .region_selector import (
+    RegionSelectionResult,
+    get_api_host_with_region_selection,
+    select_region,
+)
 
 __all__ = [
     "load_config",

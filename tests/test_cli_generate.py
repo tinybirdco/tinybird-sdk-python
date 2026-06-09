@@ -81,9 +81,15 @@ def test_run_generate_writes_artifacts_to_output_dir(tmp_path, monkeypatch) -> N
     result = run_generate({"cwd": str(tmp_path), "output_dir": str(output_dir)})
 
     assert result.success is True
-    assert (output_dir / "datasources" / "events.datasource").read_text(encoding="utf-8") == "SCHEMA >"
-    assert (output_dir / "pipes" / "events_endpoint.pipe").read_text(encoding="utf-8") == "TYPE endpoint"
-    assert (output_dir / "connections" / "kafka_main.connection").read_text(encoding="utf-8") == "TYPE kafka"
+    assert (output_dir / "datasources" / "events.datasource").read_text(
+        encoding="utf-8"
+    ) == "SCHEMA >"
+    assert (output_dir / "pipes" / "events_endpoint.pipe").read_text(
+        encoding="utf-8"
+    ) == "TYPE endpoint"
+    assert (output_dir / "connections" / "kafka_main.connection").read_text(
+        encoding="utf-8"
+    ) == "TYPE kafka"
 
 
 def test_run_generate_returns_error_when_build_fails(monkeypatch) -> None:

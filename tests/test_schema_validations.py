@@ -1,4 +1,11 @@
-from tinybird_sdk import define_datasource, define_pipe, define_endpoint, define_materialized_view, node, t
+from tinybird_sdk import (
+    define_datasource,
+    define_pipe,
+    define_endpoint,
+    define_materialized_view,
+    node,
+    t,
+)
 
 
 def test_define_datasource_name_validation() -> None:

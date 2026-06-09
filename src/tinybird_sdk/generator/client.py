@@ -42,7 +42,9 @@ class GeneratedClient:
 
 
 def generate_client_file(options: GenerateClientOptions | dict[str, Any]) -> GeneratedClient:
-    normalized = options if isinstance(options, GenerateClientOptions) else GenerateClientOptions(**options)
+    normalized = (
+        options if isinstance(options, GenerateClientOptions) else GenerateClientOptions(**options)
+    )
 
     output = Path(normalized.output_path)
     absolute_path = output if output.is_absolute() else Path(normalized.cwd) / output
