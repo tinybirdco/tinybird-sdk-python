@@ -227,7 +227,9 @@ class DynamoDBConnectionModel:
     arn: str
 
 
-ConnectionModel = KafkaConnectionModel | S3ConnectionModel | GCSConnectionModel | DynamoDBConnectionModel
+ConnectionModel = (
+    KafkaConnectionModel | S3ConnectionModel | GCSConnectionModel | DynamoDBConnectionModel
+)
 
 ParsedResource = (
     DatasourceModel

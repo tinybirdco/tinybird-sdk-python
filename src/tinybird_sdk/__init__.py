@@ -32,7 +32,10 @@ _EXPORTS = {
     "is_kafka_connection_definition": ("tinybird_sdk.schema", "is_kafka_connection_definition"),
     "is_s3_connection_definition": ("tinybird_sdk.schema", "is_s3_connection_definition"),
     "is_gcs_connection_definition": ("tinybird_sdk.schema", "is_gcs_connection_definition"),
-    "is_dynamodb_connection_definition": ("tinybird_sdk.schema", "is_dynamodb_connection_definition"),
+    "is_dynamodb_connection_definition": (
+        "tinybird_sdk.schema",
+        "is_dynamodb_connection_definition",
+    ),
     "secret": ("tinybird_sdk.schema", "secret"),
     "define_token": ("tinybird_sdk.schema", "define_token"),
     "is_token_definition": ("tinybird_sdk.schema", "is_token_definition"),

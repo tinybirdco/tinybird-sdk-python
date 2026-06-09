@@ -348,7 +348,9 @@ def _emit_gcs_connection(connection: GCSConnectionModel) -> str:
 def _emit_dynamodb_connection(connection: DynamoDBConnectionModel) -> str:
     variable_name = to_snake_case(connection.name)
     lines: list[str] = []
-    lines.append(f"{variable_name} = define_dynamodb_connection({_escape_string(connection.name)}, {{")
+    lines.append(
+        f"{variable_name} = define_dynamodb_connection({_escape_string(connection.name)}, {{"
+    )
     lines.append(f"    'region': {_escape_string(connection.region)},")
     lines.append(f"    'arn': {_escape_string(connection.arn)},")
     lines.append("})")
@@ -357,7 +359,10 @@ def _emit_dynamodb_connection(connection: DynamoDBConnectionModel) -> str:
 
 
 def _emit_connection(
-    connection: KafkaConnectionModel | S3ConnectionModel | GCSConnectionModel | DynamoDBConnectionModel,
+    connection: KafkaConnectionModel
+    | S3ConnectionModel
+    | GCSConnectionModel
+    | DynamoDBConnectionModel,
 ) -> str:
     if isinstance(connection, S3ConnectionModel):
         return _emit_s3_connection(connection)

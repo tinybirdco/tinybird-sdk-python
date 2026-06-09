@@ -134,7 +134,9 @@ def define_datasource(
         gcs_cfg = options.get("gcs")
         gcs = GCSConfig(**gcs_cfg) if isinstance(gcs_cfg, dict) else gcs_cfg
         dynamodb_cfg = options.get("dynamodb")
-        dynamodb = DynamoDBConfig(**dynamodb_cfg) if isinstance(dynamodb_cfg, dict) else dynamodb_cfg
+        dynamodb = (
+            DynamoDBConfig(**dynamodb_cfg) if isinstance(dynamodb_cfg, dict) else dynamodb_cfg
+        )
         normalized = DatasourceOptions(
             description=options.get("description"),
             schema=options["schema"],
@@ -152,10 +154,14 @@ def define_datasource(
         )
 
     ingestion_count = sum(
-        1 for x in [normalized.kafka, normalized.s3, normalized.gcs, normalized.dynamodb] if x is not None
+        1
+        for x in [normalized.kafka, normalized.s3, normalized.gcs, normalized.dynamodb]
+        if x is not None
     )
     if ingestion_count > 1:
-        raise ValueError("Datasource can only define one ingestion option: `kafka`, `s3`, `gcs`, or `dynamodb`.")
+        raise ValueError(
+            "Datasource can only define one ingestion option: `kafka`, `s3`, `gcs`, or `dynamodb`."
+        )
 
     if normalized.backfill not in {None, "skip"}:
         raise ValueError('Invalid datasource backfill value: only "skip" is supported.')

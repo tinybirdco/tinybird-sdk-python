@@ -194,7 +194,9 @@ def run_migrate(options: MigrateOptions | dict[str, Any]) -> MigrationResult:
                 )
 
         if datasource.dynamodb:
-            dynamodb_connection_type = parsed_connection_type_by_name.get(datasource.dynamodb.connection_name)
+            dynamodb_connection_type = parsed_connection_type_by_name.get(
+                datasource.dynamodb.connection_name
+            )
             if dynamodb_connection_type != "dynamodb":
                 errors.append(
                     MigrationError(

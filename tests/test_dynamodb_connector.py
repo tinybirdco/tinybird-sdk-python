@@ -205,7 +205,7 @@ def test_emit_ts_round_trip_for_dynamodb() -> None:
 
     output = emit_migration_file_content([connection, datasource])
     assert "define_dynamodb_connection" in output
-    assert "events_dynamodb = define_dynamodb_connection(\"events_dynamodb\"" in output
+    assert 'events_dynamodb = define_dynamodb_connection("events_dynamodb"' in output
     assert "'dynamodb': {" in output
     assert "'table_arn': \"arn:aws:dynamodb:us-east-1:1:table/orders\"" in output
     assert "'export_bucket': \"s3://export\"" in output

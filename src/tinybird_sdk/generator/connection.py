@@ -92,9 +92,13 @@ def generate_connection(connection: ConnectionDefinition) -> GeneratedConnection
             name=connection._name, content=_generate_s3_connection(connection)
         )
     if isinstance(connection, GCSConnectionDefinition):
-        return GeneratedConnection(name=connection._name, content=_generate_gcs_connection(connection))
+        return GeneratedConnection(
+            name=connection._name, content=_generate_gcs_connection(connection)
+        )
     if isinstance(connection, DynamoDBConnectionDefinition):
-        return GeneratedConnection(name=connection._name, content=_generate_dynamodb_connection(connection))
+        return GeneratedConnection(
+            name=connection._name, content=_generate_dynamodb_connection(connection)
+        )
     raise ValueError(f"Unsupported connection type: {connection._connectionType}")
 
 

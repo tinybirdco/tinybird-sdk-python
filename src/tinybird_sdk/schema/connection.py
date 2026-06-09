@@ -80,7 +80,10 @@ class DynamoDBConnectionDefinition:
 
 
 ConnectionDefinition = (
-    KafkaConnectionDefinition | S3ConnectionDefinition | GCSConnectionDefinition | DynamoDBConnectionDefinition
+    KafkaConnectionDefinition
+    | S3ConnectionDefinition
+    | GCSConnectionDefinition
+    | DynamoDBConnectionDefinition
 )
 
 
@@ -133,7 +136,11 @@ def define_dynamodb_connection(
     name: str, options: dict[str, Any] | DynamoDBConnectionOptions
 ) -> DynamoDBConnectionDefinition:
     _validate_connection_name(name)
-    normalized = options if isinstance(options, DynamoDBConnectionOptions) else DynamoDBConnectionOptions(**options)
+    normalized = (
+        options
+        if isinstance(options, DynamoDBConnectionOptions)
+        else DynamoDBConnectionOptions(**options)
+    )
 
     if not normalized.region.strip():
         raise ValueError("DynamoDB connection `region` is required.")
@@ -147,7 +154,12 @@ def define_dynamodb_connection(
 def is_connection_definition(value: Any) -> bool:
     return isinstance(
         value,
-        (KafkaConnectionDefinition, S3ConnectionDefinition, GCSConnectionDefinition, DynamoDBConnectionDefinition),
+        (
+            KafkaConnectionDefinition,
+            S3ConnectionDefinition,
+            GCSConnectionDefinition,
+            DynamoDBConnectionDefinition,
+        ),
     )
 
 

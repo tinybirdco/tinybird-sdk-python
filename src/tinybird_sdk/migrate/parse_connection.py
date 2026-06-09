@@ -1,6 +1,13 @@
 from __future__ import annotations
 
-from .parser_utils import MigrationParseError, is_blank, parse_directive_line, parse_quoted_value, read_directive_block, split_lines
+from .parser_utils import (
+    MigrationParseError,
+    is_blank,
+    parse_directive_line,
+    parse_quoted_value,
+    read_directive_block,
+    split_lines,
+)
 from .types import (
     ConnectionModel,
     DynamoDBConnectionModel,
