@@ -162,7 +162,9 @@ class TinybirdClient:
             branch_options = None
             branch_value = config.get("branch_data_mode")
             if branch_value and config.get("dev_mode") != "local":
-                branch_options = CreateBranchOptions(last_partition=(branch_value == "last_partition"))
+                branch_options = CreateBranchOptions(
+                    last_partition=(branch_value == "last_partition")
+                )
 
             branch = get_or_create_branch(
                 {

@@ -32,7 +32,9 @@ def test_create_branch_uses_last_partition_data_query(monkeypatch: pytest.Monkey
             return _FakeResponse(200, {"job": {"id": "job-1"}})
         if "/v0/jobs/" in url:
             return _FakeResponse(200, {"status": "done"})
-        return _FakeResponse(200, {"id": "b1", "name": "x", "created_at": "2024-01-01T00:00:00Z", "token": "p.test"})
+        return _FakeResponse(
+            200, {"id": "b1", "name": "x", "created_at": "2024-01-01T00:00:00Z", "token": "p.test"}
+        )
 
     monkeypatch.setattr(branches_module, "tinybird_fetch", fake_fetch)
     create_branch(
@@ -56,7 +58,9 @@ def test_create_branch_without_options_keeps_default_query(monkeypatch: pytest.M
             return _FakeResponse(200, {"job": {"id": "job-1"}})
         if "/v0/jobs/" in url:
             return _FakeResponse(200, {"status": "done"})
-        return _FakeResponse(200, {"id": "b1", "name": "x", "created_at": "2024-01-01T00:00:00Z", "token": "p.test"})
+        return _FakeResponse(
+            200, {"id": "b1", "name": "x", "created_at": "2024-01-01T00:00:00Z", "token": "p.test"}
+        )
 
     monkeypatch.setattr(branches_module, "tinybird_fetch", fake_fetch)
     create_branch({"base_url": "https://api.tinybird.co", "token": "p.test"}, "x")
@@ -74,7 +78,9 @@ def test_clear_branch_forwards_create_options(monkeypatch: pytest.MonkeyPatch) -
 
     monkeypatch.setattr(branches_module, "delete_branch", lambda *_args, **_kwargs: None)
 
-    def fake_create_branch(_config: dict[str, Any], _name: str, options: CreateBranchOptions | None = None) -> Any:
+    def fake_create_branch(
+        _config: dict[str, Any], _name: str, options: CreateBranchOptions | None = None
+    ) -> Any:
         captured_options.append(options)
         return {"id": "b1", "name": "x", "created_at": "2024-01-01T00:00:00Z", "token": "p.test"}
 

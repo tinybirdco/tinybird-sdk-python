@@ -6,6 +6,7 @@ from typing import Any
 from urllib.parse import urlencode
 
 from .fetcher import tinybird_fetch
+
 LAST_PARTITION = "last_partition"
 
 LAST_PARTITION = "last_partition"
