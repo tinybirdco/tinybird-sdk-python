@@ -14,6 +14,7 @@ from .parser_utils import (
 )
 from .types import (
     DatasourceColumnModel,
+    DatasourceDynamoDBModel,
     DatasourceEngineModel,
     DatasourceGCSModel,
     DatasourceIndexModel,
@@ -281,6 +282,8 @@ def parse_datasource_file(resource: ResourceFile) -> DatasourceModel:
     import_bucket_uri: str | None = None
     import_schedule: str | None = None
     import_from_timestamp: str | None = None
+    import_table_arn: str | None = None
+    import_export_bucket: str | None = None
 
     i = 0
     while i < len(lines):
@@ -413,6 +416,10 @@ def parse_datasource_file(resource: ResourceFile) -> DatasourceModel:
             import_schedule = parse_quoted_value(value)
         elif key == "IMPORT_FROM_TIMESTAMP":
             import_from_timestamp = parse_quoted_value(value)
+        elif key == "IMPORT_TABLE_ARN":
+            import_table_arn = parse_quoted_value(value)
+        elif key == "IMPORT_EXPORT_BUCKET":
+            import_export_bucket = parse_quoted_value(value)
         elif key == "BACKFILL":
             normalized = value.strip().lower()
             if normalized != "skip":
@@ -486,8 +493,32 @@ def parse_datasource_file(resource: ResourceFile) -> DatasourceModel:
             store_raw_value=kafka_store_raw_value,
         )
 
+    dynamodb: DatasourceDynamoDBModel | None = None
+    if import_table_arn or import_export_bucket:
+        if not import_connection_name or not import_table_arn or not import_export_bucket:
+            raise MigrationParseError(
+                resource.file_path,
+                "datasource",
+                resource.name,
+                "IMPORT_CONNECTION_NAME, IMPORT_TABLE_ARN and IMPORT_EXPORT_BUCKET are required for DynamoDB imports.",
+            )
+        if import_bucket_uri or import_schedule or import_from_timestamp:
+            raise MigrationParseError(
+                resource.file_path,
+                "datasource",
+                resource.name,
+                "DynamoDB imports cannot be combined with S3/GCS import directives.",
+            )
+        dynamodb = DatasourceDynamoDBModel(
+            connection_name=import_connection_name,
+            table_arn=import_table_arn,
+            export_bucket=import_export_bucket,
+        )
+
     imported: DatasourceS3Model | None = None
-    if import_connection_name or import_bucket_uri or import_schedule or import_from_timestamp:
+    if not dynamodb and (
+        import_connection_name or import_bucket_uri or import_schedule or import_from_timestamp
+    ):
         if not import_connection_name or not import_bucket_uri:
             raise MigrationParseError(
                 resource.file_path,
@@ -502,7 +533,7 @@ def parse_datasource_file(resource: ResourceFile) -> DatasourceModel:
             from_timestamp=import_from_timestamp,
         )
 
-    if kafka and imported:
+    if kafka and (imported or dynamodb):
         raise MigrationParseError(
             resource.file_path,
             "datasource",
@@ -536,6 +567,7 @@ def parse_datasource_file(resource: ResourceFile) -> DatasourceModel:
         kafka=kafka,
         s3=imported,
         gcs=None,
+        dynamodb=dynamodb,
         forward_query=forward_query,
         tokens=tokens,
         shared_with=shared_with,

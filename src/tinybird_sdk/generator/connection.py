@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from ..schema.connection import (
     ConnectionDefinition,
+    DynamoDBConnectionDefinition,
     GCSConnectionDefinition,
     KafkaConnectionDefinition,
     S3ConnectionDefinition,
@@ -70,6 +71,17 @@ def _generate_gcs_connection(connection: GCSConnectionDefinition) -> str:
     return "\n".join(parts)
 
 
+def _generate_dynamodb_connection(connection: DynamoDBConnectionDefinition) -> str:
+    options = connection.options
+    parts = [
+        "TYPE dynamodb",
+        f"DYNAMODB_ARN {options.arn}",
+        f"DYNAMODB_REGION {options.region}",
+    ]
+
+    return "\n".join(parts)
+
+
 def generate_connection(connection: ConnectionDefinition) -> GeneratedConnection:
     if isinstance(connection, KafkaConnectionDefinition):
         return GeneratedConnection(
@@ -82,6 +94,10 @@ def generate_connection(connection: ConnectionDefinition) -> GeneratedConnection
     if isinstance(connection, GCSConnectionDefinition):
         return GeneratedConnection(
             name=connection._name, content=_generate_gcs_connection(connection)
+        )
+    if isinstance(connection, DynamoDBConnectionDefinition):
+        return GeneratedConnection(
+            name=connection._name, content=_generate_dynamodb_connection(connection)
         )
     raise ValueError(f"Unsupported connection type: {connection._connectionType}")
 

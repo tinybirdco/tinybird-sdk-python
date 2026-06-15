@@ -8,6 +8,7 @@ from ..codegen.utils import to_snake_case
 from .parser_utils import parse_literal_from_datafile
 from .types import (
     DatasourceModel,
+    DynamoDBConnectionModel,
     GCSConnectionModel,
     KafkaConnectionModel,
     ParsedResource,
@@ -261,6 +262,14 @@ def _emit_datasource(ds: DatasourceModel) -> str:
             lines.append(f"        'from_timestamp': {_escape_string(ds.gcs.from_timestamp)},")
         lines.append("    },")
 
+    if ds.dynamodb:
+        connection_var = to_snake_case(ds.dynamodb.connection_name)
+        lines.append("    'dynamodb': {")
+        lines.append(f"        'connection': {connection_var},")
+        lines.append(f"        'table_arn': {_escape_string(ds.dynamodb.table_arn)},")
+        lines.append(f"        'export_bucket': {_escape_string(ds.dynamodb.export_bucket)},")
+        lines.append("    },")
+
     if ds.forward_query:
         lines.append("    'forward_query': '''")
         lines.append(ds.forward_query)
@@ -336,13 +345,31 @@ def _emit_gcs_connection(connection: GCSConnectionModel) -> str:
     return "\n".join(lines)
 
 
+def _emit_dynamodb_connection(connection: DynamoDBConnectionModel) -> str:
+    variable_name = to_snake_case(connection.name)
+    lines: list[str] = []
+    lines.append(
+        f"{variable_name} = define_dynamodb_connection({_escape_string(connection.name)}, {{"
+    )
+    lines.append(f"    'region': {_escape_string(connection.region)},")
+    lines.append(f"    'arn': {_escape_string(connection.arn)},")
+    lines.append("})")
+    lines.append("")
+    return "\n".join(lines)
+
+
 def _emit_connection(
-    connection: KafkaConnectionModel | S3ConnectionModel | GCSConnectionModel,
+    connection: KafkaConnectionModel
+    | S3ConnectionModel
+    | GCSConnectionModel
+    | DynamoDBConnectionModel,
 ) -> str:
     if isinstance(connection, S3ConnectionModel):
         return _emit_s3_connection(connection)
     if isinstance(connection, GCSConnectionModel):
         return _emit_gcs_connection(connection)
+    if isinstance(connection, DynamoDBConnectionModel):
+        return _emit_dynamodb_connection(connection)
     return _emit_kafka_connection(connection)
 
 
@@ -474,6 +501,8 @@ def emit_migration_file_content(resources: list[ParsedResource]) -> str:
             imports.add("define_s3_connection")
         elif isinstance(conn, GCSConnectionModel):
             imports.add("define_gcs_connection")
+        elif isinstance(conn, DynamoDBConnectionModel):
+            imports.add("define_dynamodb_connection")
     if needs_column:
         imports.add("column")
     if needs_params:

@@ -10,6 +10,7 @@ from .parser_utils import (
 )
 from .types import (
     ConnectionModel,
+    DynamoDBConnectionModel,
     GCSConnectionModel,
     KafkaConnectionModel,
     ResourceFile,
@@ -30,6 +31,8 @@ CONNECTION_DIRECTIVES = {
     "S3_ACCESS_KEY",
     "S3_SECRET",
     "GCS_SERVICE_ACCOUNT_CREDENTIALS_JSON",
+    "DYNAMODB_ARN",
+    "DYNAMODB_REGION",
 }
 
 
@@ -57,6 +60,9 @@ def parse_connection_file(resource: ResourceFile) -> ConnectionModel:
     access_key: str | None = None
     access_secret: str | None = None
     service_account_credentials_json: str | None = None
+
+    dynamodb_arn: str | None = None
+    dynamodb_region: str | None = None
 
     i = 0
     while i < len(lines):
@@ -119,6 +125,10 @@ def parse_connection_file(resource: ResourceFile) -> ConnectionModel:
             access_secret = parse_quoted_value(value)
         elif name == "GCS_SERVICE_ACCOUNT_CREDENTIALS_JSON":
             service_account_credentials_json = parse_quoted_value(value)
+        elif name == "DYNAMODB_ARN":
+            dynamodb_arn = parse_quoted_value(value)
+        elif name == "DYNAMODB_REGION":
+            dynamodb_region = parse_quoted_value(value)
         else:
             raise MigrationParseError(
                 resource.file_path,
@@ -135,12 +145,20 @@ def parse_connection_file(resource: ResourceFile) -> ConnectionModel:
         )
 
     if connection_type == "kafka":
-        if region or arn or access_key or access_secret or service_account_credentials_json:
+        if (
+            region
+            or arn
+            or access_key
+            or access_secret
+            or service_account_credentials_json
+            or dynamodb_arn
+            or dynamodb_region
+        ):
             raise MigrationParseError(
                 resource.file_path,
                 "connection",
                 resource.name,
-                "S3/GCS directives are not valid for kafka connections.",
+                "S3/GCS/DynamoDB directives are not valid for kafka connections.",
             )
 
         if not bootstrap_servers:
@@ -175,12 +193,14 @@ def parse_connection_file(resource: ResourceFile) -> ConnectionModel:
             or schema_registry_url
             or ssl_ca_pem
             or service_account_credentials_json
+            or dynamodb_arn
+            or dynamodb_region
         ):
             raise MigrationParseError(
                 resource.file_path,
                 "connection",
                 resource.name,
-                "Kafka/GCS directives are not valid for s3 connections.",
+                "Kafka/GCS/DynamoDB directives are not valid for s3 connections.",
             )
 
         if not region:
@@ -231,12 +251,14 @@ def parse_connection_file(resource: ResourceFile) -> ConnectionModel:
             or arn
             or access_key
             or access_secret
+            or dynamodb_arn
+            or dynamodb_region
         ):
             raise MigrationParseError(
                 resource.file_path,
                 "connection",
                 resource.name,
-                "Kafka/S3 directives are not valid for gcs connections.",
+                "Kafka/S3/DynamoDB directives are not valid for gcs connections.",
             )
 
         if not service_account_credentials_json:
@@ -253,6 +275,53 @@ def parse_connection_file(resource: ResourceFile) -> ConnectionModel:
             file_path=resource.file_path,
             connection_type="gcs",
             service_account_credentials_json=service_account_credentials_json,
+        )
+
+    if connection_type == "dynamodb":
+        if (
+            bootstrap_servers
+            or security_protocol
+            or sasl_mechanism
+            or key
+            or secret
+            or schema_registry_url
+            or ssl_ca_pem
+            or region
+            or arn
+            or access_key
+            or access_secret
+            or service_account_credentials_json
+        ):
+            raise MigrationParseError(
+                resource.file_path,
+                "connection",
+                resource.name,
+                "Kafka/S3/GCS directives are not valid for dynamodb connections.",
+            )
+
+        if not dynamodb_arn:
+            raise MigrationParseError(
+                resource.file_path,
+                "connection",
+                resource.name,
+                "DYNAMODB_ARN is required for dynamodb connections.",
+            )
+
+        if not dynamodb_region:
+            raise MigrationParseError(
+                resource.file_path,
+                "connection",
+                resource.name,
+                "DYNAMODB_REGION is required for dynamodb connections.",
+            )
+
+        return DynamoDBConnectionModel(
+            kind="connection",
+            name=resource.name,
+            file_path=resource.file_path,
+            connection_type="dynamodb",
+            region=dynamodb_region,
+            arn=dynamodb_arn,
         )
 
     raise MigrationParseError(

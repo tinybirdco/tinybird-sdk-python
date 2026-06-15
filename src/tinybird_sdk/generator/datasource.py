@@ -124,6 +124,15 @@ def _generate_import_config(import_config: Any) -> str:
     return "\n".join(lines)
 
 
+def _generate_dynamodb_config(dynamodb: Any) -> str:
+    lines = [
+        f"IMPORT_CONNECTION_NAME {dynamodb.connection._name}",
+        f"IMPORT_TABLE_ARN {dynamodb.table_arn}",
+        f"IMPORT_EXPORT_BUCKET {dynamodb.export_bucket}",
+    ]
+    return "\n".join(lines)
+
+
 def _generate_forward_query(forward_query: str | None) -> str | None:
     if not forward_query or not forward_query.strip():
         return None
@@ -192,6 +201,9 @@ def generate_datasource(datasource: DatasourceDefinition) -> GeneratedDatasource
 
     if datasource.options.gcs:
         parts.extend(["", _generate_import_config(datasource.options.gcs)])
+
+    if datasource.options.dynamodb:
+        parts.extend(["", _generate_dynamodb_config(datasource.options.dynamodb)])
 
     forward_query = _generate_forward_query(datasource.options.forward_query)
     if forward_query:

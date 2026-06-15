@@ -74,6 +74,13 @@ class DatasourceGCSModel:
 
 
 @dataclass(frozen=True, slots=True)
+class DatasourceDynamoDBModel:
+    connection_name: str
+    table_arn: str
+    export_bucket: str
+
+
+@dataclass(frozen=True, slots=True)
 class DatasourceTokenModel:
     name: str
     scope: Literal["READ", "APPEND"]
@@ -100,6 +107,7 @@ class DatasourceModel:
     kafka: DatasourceKafkaModel | None = None
     s3: DatasourceS3Model | None = None
     gcs: DatasourceGCSModel | None = None
+    dynamodb: DatasourceDynamoDBModel | None = None
     forward_query: str | None = None
     tokens: list[DatasourceTokenModel] = field(default_factory=list)
     shared_with: list[str] = field(default_factory=list)
@@ -209,10 +217,27 @@ class GCSConnectionModel:
     service_account_credentials_json: str
 
 
-ConnectionModel = KafkaConnectionModel | S3ConnectionModel | GCSConnectionModel
+@dataclass(frozen=True, slots=True)
+class DynamoDBConnectionModel:
+    kind: Literal["connection"]
+    name: str
+    file_path: str
+    connection_type: Literal["dynamodb"]
+    region: str
+    arn: str
+
+
+ConnectionModel = (
+    KafkaConnectionModel | S3ConnectionModel | GCSConnectionModel | DynamoDBConnectionModel
+)
 
 ParsedResource = (
-    DatasourceModel | PipeModel | KafkaConnectionModel | S3ConnectionModel | GCSConnectionModel
+    DatasourceModel
+    | PipeModel
+    | KafkaConnectionModel
+    | S3ConnectionModel
+    | GCSConnectionModel
+    | DynamoDBConnectionModel
 )
 
 
