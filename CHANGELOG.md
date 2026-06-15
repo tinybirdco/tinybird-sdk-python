@@ -9,7 +9,7 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ### Changed
 
-- Bumped bundled `tinybird` CLI dependency to `4.6.1`.
+- Relaxed bundled `tinybird` CLI dependency to `>=4.6.0,<4.7.0` to avoid resolution failures while keeping the SDK on the `4.6.x` line.
 - Updated branch data config handling to use `branch_data_mode`; legacy `branch_data_on_create` now triggers an explicit migration error.
 - `branch_data_mode` now only accepts `last_partition` as a user-facing value.
 - In `dev_mode=local`, branch data mode warnings are now shown only when `branch_data_mode` is explicitly set in `tinybird.config.json`.
