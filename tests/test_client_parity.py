@@ -76,7 +76,7 @@ def test_client_branch_context_uses_branch_token(monkeypatch: pytest.MonkeyPatch
     assert context["token"] == "branch_token"
     assert context["is_branch_token"] is True
     assert context["branch_name"] == "feature_alpha"
-    assert captured["options"].last_partition is True
+    assert captured["options"].branch_data_mode == "last_partition"
 
 
 def test_tokens_namespace_wraps_token_api_errors(monkeypatch: pytest.MonkeyPatch) -> None:

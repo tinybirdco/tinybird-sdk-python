@@ -5,11 +5,8 @@ from dataclasses import asdict, dataclass
 from typing import Any
 from urllib.parse import urlencode
 
+from ..cli.config_types import BranchDataMode
 from .fetcher import tinybird_fetch
-
-LAST_PARTITION = "last_partition"
-
-LAST_PARTITION = "last_partition"
 
 
 @dataclass(frozen=True, slots=True)
@@ -28,7 +25,7 @@ class TinybirdBranch:
 
 @dataclass(frozen=True, slots=True)
 class CreateBranchOptions:
-    last_partition: bool = False
+    branch_data_mode: BranchDataMode | None = None
 
 
 class BranchApiError(Exception):
@@ -79,8 +76,8 @@ def create_branch(
 ) -> TinybirdBranch:
     normalized = config if isinstance(config, BranchApiConfig) else BranchApiConfig(**config)
     params = {"name": name}
-    if options and options.last_partition:
-        params["data"] = LAST_PARTITION
+    if options and options.branch_data_mode:
+        params["data"] = options.branch_data_mode
     url = f"{normalized.base_url.rstrip('/')}/v1/environments?{urlencode(params)}"
     response = tinybird_fetch(url, method="POST", headers=_headers(normalized.token))
 

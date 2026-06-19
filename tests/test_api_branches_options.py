@@ -40,7 +40,7 @@ def test_create_branch_uses_last_partition_data_query(monkeypatch: pytest.Monkey
     create_branch(
         {"base_url": "https://api.tinybird.co", "token": "p.test"},
         "x",
-        options=CreateBranchOptions(last_partition=True),
+        options=CreateBranchOptions(branch_data_mode="last_partition"),
     )
 
     parsed = urlparse(called_urls[0])
@@ -89,9 +89,9 @@ def test_clear_branch_forwards_create_options(monkeypatch: pytest.MonkeyPatch) -
     clear_branch(
         {"base_url": "https://api.tinybird.co", "token": "p.test"},
         "x",
-        options=CreateBranchOptions(last_partition=True),
+        options=CreateBranchOptions(branch_data_mode="last_partition"),
     )
 
     assert len(captured_options) == 1
     assert captured_options[0] is not None
-    assert captured_options[0].last_partition is True
+    assert captured_options[0].branch_data_mode == "last_partition"
