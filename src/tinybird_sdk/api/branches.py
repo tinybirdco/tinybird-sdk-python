@@ -1,14 +1,12 @@
 from __future__ import annotations
 
 import time
-from dataclasses import asdict
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import Any
 from urllib.parse import urlencode
 
+from ..cli.config_types import BranchDataMode
 from .fetcher import tinybird_fetch
-
-LAST_PARTITION = "last_partition"
 
 
 @dataclass(frozen=True, slots=True)
@@ -23,6 +21,11 @@ class TinybirdBranch:
     name: str
     created_at: str
     token: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class CreateBranchOptions:
+    branch_data_mode: BranchDataMode | None = None
 
 
 class BranchApiError(Exception):
@@ -68,9 +71,14 @@ def _poll_job(
     raise BranchApiError(f"Job '{job_id}' timed out after {max_attempts} attempts", 408)
 
 
-def create_branch(config: BranchApiConfig | dict[str, Any], name: str) -> TinybirdBranch:
+def create_branch(
+    config: BranchApiConfig | dict[str, Any], name: str, options: CreateBranchOptions | None = None
+) -> TinybirdBranch:
     normalized = config if isinstance(config, BranchApiConfig) else BranchApiConfig(**config)
-    url = f"{normalized.base_url.rstrip('/')}/v1/environments?{urlencode({'name': name})}"
+    params = {"name": name}
+    if options and options.branch_data_mode:
+        params["data"] = options.branch_data_mode
+    url = f"{normalized.base_url.rstrip('/')}/v1/environments?{urlencode(params)}"
     response = tinybird_fetch(url, method="POST", headers=_headers(normalized.token))
 
     if not response.ok:
@@ -152,19 +160,23 @@ def branch_exists(config: BranchApiConfig | dict[str, Any], name: str) -> bool:
     return any(branch.name == name for branch in branches)
 
 
-def get_or_create_branch(config: BranchApiConfig | dict[str, Any], name: str) -> dict[str, Any]:
+def get_or_create_branch(
+    config: BranchApiConfig | dict[str, Any], name: str, options: CreateBranchOptions | None = None
+) -> dict[str, Any]:
     normalized = config if isinstance(config, BranchApiConfig) else BranchApiConfig(**config)
     try:
         branch = get_branch(normalized, name)
         return {**asdict(branch), "was_created": False}
     except BranchApiError as error:
         if error.status == 404:
-            branch = create_branch(normalized, name)
+            branch = create_branch(normalized, name, options=options)
             return {**asdict(branch), "was_created": True}
         raise
 
 
-def clear_branch(config: BranchApiConfig | dict[str, Any], name: str) -> TinybirdBranch:
+def clear_branch(
+    config: BranchApiConfig | dict[str, Any], name: str, options: CreateBranchOptions | None = None
+) -> TinybirdBranch:
     normalized = config if isinstance(config, BranchApiConfig) else BranchApiConfig(**config)
     delete_branch(normalized, name)
-    return create_branch(normalized, name)
+    return create_branch(normalized, name, options=options)

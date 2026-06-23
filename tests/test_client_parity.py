@@ -43,6 +43,8 @@ def test_client_query_and_api_error_mapping(monkeypatch: pytest.MonkeyPatch) -> 
 
 
 def test_client_branch_context_uses_branch_token(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: dict[str, Any] = {}
+
     monkeypatch.setattr(client_base, "is_preview_environment", lambda: False)
     monkeypatch.setattr(
         client_base,
@@ -51,13 +53,16 @@ def test_client_branch_context_uses_branch_token(monkeypatch: pytest.MonkeyPatch
             "git_branch": "feature/alpha",
             "tinybird_branch": "feature_alpha",
             "is_main_branch": False,
+            "dev_mode": "branch",
+            "branch_data_mode": "last_partition",
         },
     )
-    monkeypatch.setattr(
-        client_base,
-        "get_or_create_branch",
-        lambda *_args, **_kwargs: {"token": "branch_token"},
-    )
+
+    def fake_get_or_create_branch(*_args: Any, **kwargs: Any) -> dict[str, Any]:
+        captured.update(kwargs)
+        return {"token": "branch_token"}
+
+    monkeypatch.setattr(client_base, "get_or_create_branch", fake_get_or_create_branch)
 
     client = TinybirdClient(
         {
@@ -71,6 +76,7 @@ def test_client_branch_context_uses_branch_token(monkeypatch: pytest.MonkeyPatch
     assert context["token"] == "branch_token"
     assert context["is_branch_token"] is True
     assert context["branch_name"] == "feature_alpha"
+    assert captured["options"].branch_data_mode == "last_partition"
 
 
 def test_tokens_namespace_wraps_token_api_errors(monkeypatch: pytest.MonkeyPatch) -> None:

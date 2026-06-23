@@ -5,7 +5,7 @@ import os
 import time
 from typing import Any
 
-from ...api.branches import create_branch, delete_branch, get_branch
+from ...api.branches import CreateBranchOptions, create_branch, delete_branch, get_branch
 from ...api.build import build_to_tinybird
 from ...api.deploy import deploy_to_main
 from ...api.local import LocalNotRunningError, get_local_tokens, get_or_create_local_workspace
@@ -151,8 +151,14 @@ def run_preview(
         except Exception:
             pass
 
+        branch_options = None
+        branch_value = config.get("branch_data_mode")
+        if branch_value and config.get("dev_mode") != "local":
+            branch_options = CreateBranchOptions(branch_data_mode=branch_value)
         branch = create_branch(
-            {"base_url": config["base_url"], "token": config["token"]}, preview_branch_name
+            {"base_url": config["base_url"], "token": config["token"]},
+            preview_branch_name,
+            options=branch_options,
         )
     except Exception as error:
         return PreviewCommandResult(
