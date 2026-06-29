@@ -121,6 +121,8 @@ def _generate_import_config(import_config: Any) -> str:
         lines.append(f"IMPORT_SCHEDULE {import_config.schedule}")
     if import_config.from_timestamp:
         lines.append(f"IMPORT_FROM_TIMESTAMP {import_config.from_timestamp}")
+    if getattr(import_config, "import_format", None):
+        lines.append(f'IMPORT_FORMAT "{import_config.import_format}"')
     return "\n".join(lines)
 
 
