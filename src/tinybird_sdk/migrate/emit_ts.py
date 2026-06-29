@@ -249,6 +249,8 @@ def _emit_datasource(ds: DatasourceModel) -> str:
             lines.append(f"        'schedule': {_escape_string(ds.s3.schedule)},")
         if ds.s3.from_timestamp:
             lines.append(f"        'from_timestamp': {_escape_string(ds.s3.from_timestamp)},")
+        if ds.s3.import_format:
+            lines.append(f"        'import_format': {_escape_string(ds.s3.import_format)},")
         lines.append("    },")
 
     if ds.gcs:
@@ -260,6 +262,8 @@ def _emit_datasource(ds: DatasourceModel) -> str:
             lines.append(f"        'schedule': {_escape_string(ds.gcs.schedule)},")
         if ds.gcs.from_timestamp:
             lines.append(f"        'from_timestamp': {_escape_string(ds.gcs.from_timestamp)},")
+        if ds.gcs.import_format:
+            lines.append(f"        'import_format': {_escape_string(ds.gcs.import_format)},")
         lines.append("    },")
 
     if ds.dynamodb:
