@@ -282,6 +282,7 @@ def parse_datasource_file(resource: ResourceFile) -> DatasourceModel:
     import_bucket_uri: str | None = None
     import_schedule: str | None = None
     import_from_timestamp: str | None = None
+    import_format: str | None = None
     import_table_arn: str | None = None
     import_export_bucket: str | None = None
 
@@ -416,6 +417,8 @@ def parse_datasource_file(resource: ResourceFile) -> DatasourceModel:
             import_schedule = parse_quoted_value(value)
         elif key == "IMPORT_FROM_TIMESTAMP":
             import_from_timestamp = parse_quoted_value(value)
+        elif key == "IMPORT_FORMAT":
+            import_format = parse_quoted_value(value)
         elif key == "IMPORT_TABLE_ARN":
             import_table_arn = parse_quoted_value(value)
         elif key == "IMPORT_EXPORT_BUCKET":
@@ -502,7 +505,7 @@ def parse_datasource_file(resource: ResourceFile) -> DatasourceModel:
                 resource.name,
                 "IMPORT_CONNECTION_NAME, IMPORT_TABLE_ARN and IMPORT_EXPORT_BUCKET are required for DynamoDB imports.",
             )
-        if import_bucket_uri or import_schedule or import_from_timestamp:
+        if import_bucket_uri or import_schedule or import_from_timestamp or import_format:
             raise MigrationParseError(
                 resource.file_path,
                 "datasource",
@@ -517,7 +520,11 @@ def parse_datasource_file(resource: ResourceFile) -> DatasourceModel:
 
     imported: DatasourceS3Model | None = None
     if not dynamodb and (
-        import_connection_name or import_bucket_uri or import_schedule or import_from_timestamp
+        import_connection_name
+        or import_bucket_uri
+        or import_schedule
+        or import_from_timestamp
+        or import_format
     ):
         if not import_connection_name or not import_bucket_uri:
             raise MigrationParseError(
@@ -531,6 +538,7 @@ def parse_datasource_file(resource: ResourceFile) -> DatasourceModel:
             bucket_uri=import_bucket_uri,
             schedule=import_schedule,
             from_timestamp=import_from_timestamp,
+            import_format=import_format,
         )
 
     if kafka and (imported or dynamodb):

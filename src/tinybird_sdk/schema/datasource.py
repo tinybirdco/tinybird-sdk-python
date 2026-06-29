@@ -57,6 +57,7 @@ class S3Config:
     bucket_uri: str
     schedule: str | None = None
     from_timestamp: str | None = None
+    import_format: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -65,6 +66,7 @@ class GCSConfig:
     bucket_uri: str
     schedule: str | None = None
     from_timestamp: str | None = None
+    import_format: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
