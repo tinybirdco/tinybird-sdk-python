@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `client.tokens` gains lifecycle management for existing static tokens: `list()`, `get(name)`, `scopes(name)`, `refresh(name)`, `revoke(name)`, and `copy(name)`, matching `tb token ls/rm/refresh/scopes/copy`. `copy()` returns the token's current value since a library has no clipboard to copy it to. Backed by new `TinybirdApi.list_tokens()`/`get_token()`/`refresh_token()`/`revoke_token()` wrapping `/v0/tokens`.
+
 ## [0.4.0] - 2026-06-29
 
 ### Added

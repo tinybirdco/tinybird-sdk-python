@@ -363,6 +363,72 @@ class TinybirdApi:
             self._raise_for_error(response.status_code, response.text)
         return response.json()
 
+    def list_tokens(self, options: dict[str, Any] | None = None) -> dict[str, Any]:
+        """List tokens in the workspace via ``GET /v0/tokens``."""
+        options = options or {}
+        response = self.request(
+            "/v0/tokens",
+            method="GET",
+            token=options.get("token"),
+            timeout=options.get("timeout"),
+        )
+        if not response.ok:
+            self._raise_for_error(response.status_code, response.text)
+        return response.json()
+
+    def get_token(self, token_name: str, options: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Get a single token's details, including its scopes and current value, via
+        ``GET /v0/tokens/{name}``."""
+        options = options or {}
+        response = self.request(
+            f"/v0/tokens/{token_name}",
+            method="GET",
+            token=options.get("token"),
+            timeout=options.get("timeout"),
+        )
+        if not response.ok:
+            self._raise_for_error(response.status_code, response.text)
+        return response.json()
+
+    def refresh_token(
+        self, token_name: str, options: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
+        """Rotate a token's value via ``POST /v0/tokens/{name}/refresh``."""
+        options = options or {}
+        response = self.request(
+            f"/v0/tokens/{token_name}/refresh",
+            method="POST",
+            token=options.get("token"),
+            body="",
+            timeout=options.get("timeout"),
+        )
+        if not response.ok:
+            self._raise_for_error(response.status_code, response.text)
+        return self._json_or_empty(response)
+
+    def revoke_token(
+        self, token_name: str, options: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
+        """Revoke (delete) a token via ``DELETE /v0/tokens/{name}``."""
+        options = options or {}
+        response = self.request(
+            f"/v0/tokens/{token_name}",
+            method="DELETE",
+            token=options.get("token"),
+            timeout=options.get("timeout"),
+        )
+        if not response.ok:
+            self._raise_for_error(response.status_code, response.text)
+        return self._json_or_empty(response)
+
+    def _json_or_empty(self, response: Any) -> dict[str, Any]:
+        if not response.text.strip():
+            return {}
+        try:
+            return response.json()
+        except json.JSONDecodeError:
+            return {}
+
     def _timeout_seconds(self, timeout_ms: int | None) -> float:
         timeout = timeout_ms if timeout_ms is not None else self._default_timeout
         return max(timeout / 1000.0, 0.001)

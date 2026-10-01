@@ -350,6 +350,40 @@ jwt_token = result["token"]
 - **`fixed_params`**: For pipes, embed parameters that cannot be overridden by the caller.
 - **`filter`**: For datasources, append a SQL WHERE clause (for example, `"org_id = 'acme'"`).
 
+## Token Lifecycle Management
+
+Manage static tokens the workspace already has, matching `tb token ls/rm/refresh/scopes/copy`.
+
+```python
+from tinybird_sdk import create_client
+
+client = create_client(
+    {
+        "base_url": "https://api.tinybird.co",
+        "token": "p.your_admin_token",
+    }
+)
+
+# List tokens (tb token ls)
+tokens = client.tokens.list()
+
+# Get a token's details, including its scopes and current value (tb token get)
+token = client.tokens.get("user_123_session")
+
+# List just a token's scopes (tb token scopes)
+scopes = client.tokens.scopes("user_123_session")
+
+# Rotate a token's value (tb token refresh)
+refreshed = client.tokens.refresh("user_123_session")
+
+# Revoke (delete) a token (tb token rm)
+client.tokens.revoke("user_123_session")
+
+# Get a token's current value (tb token copy copies it to the clipboard;
+# in a library there's no clipboard, so this returns the same value instead)
+value = client.tokens.copy("user_123_session")
+```
+
 ## CLI Commands
 
 This package installs `tinybird` as a runtime dependency.
