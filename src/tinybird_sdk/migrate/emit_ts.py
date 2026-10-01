@@ -341,9 +341,15 @@ def _emit_gcs_connection(connection: GCSConnectionModel) -> str:
     variable_name = to_snake_case(connection.name)
     lines: list[str] = []
     lines.append(f"{variable_name} = define_gcs_connection({_escape_string(connection.name)}, {{")
-    lines.append(
-        f"    'service_account_credentials_json': {_escape_string(connection.service_account_credentials_json)},"
-    )
+    if connection.service_account_credentials_json:
+        lines.append(
+            f"    'service_account_credentials_json': "
+            f"{_escape_string(connection.service_account_credentials_json)},"
+        )
+    if connection.hmac_access_id:
+        lines.append(f"    'hmac_access_id': {_escape_string(connection.hmac_access_id)},")
+    if connection.hmac_secret:
+        lines.append(f"    'hmac_secret': {_escape_string(connection.hmac_secret)},")
     lines.append("})")
     lines.append("")
     return "\n".join(lines)

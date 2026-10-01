@@ -54,7 +54,9 @@ class S3ConnectionDefinition:
 
 @dataclass(frozen=True, slots=True)
 class GCSConnectionOptions:
-    service_account_credentials_json: str
+    service_account_credentials_json: str | None = None
+    hmac_access_id: str | None = None
+    hmac_secret: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -126,8 +128,28 @@ def define_gcs_connection(
         options if isinstance(options, GCSConnectionOptions) else GCSConnectionOptions(**options)
     )
 
-    if not normalized.service_account_credentials_json.strip():
-        raise ValueError("GCS connection `service_account_credentials_json` is required.")
+    service_account_credentials_json = normalized.service_account_credentials_json
+    has_service_account = bool(
+        service_account_credentials_json and service_account_credentials_json.strip()
+    )
+    has_hmac = bool(normalized.hmac_access_id or normalized.hmac_secret)
+
+    if not has_service_account and not has_hmac:
+        raise ValueError(
+            "GCS connection requires either `service_account_credentials_json` or both "
+            "`hmac_access_id` and `hmac_secret`."
+        )
+
+    if has_service_account and has_hmac:
+        raise ValueError(
+            "GCS connection `service_account_credentials_json` and `hmac_access_id`/`hmac_secret` "
+            "are mutually exclusive."
+        )
+
+    if has_hmac and not (normalized.hmac_access_id and normalized.hmac_secret):
+        raise ValueError(
+            "GCS connection `hmac_access_id` and `hmac_secret` must be provided together."
+        )
 
     return GCSConnectionDefinition(_name=name, options=normalized)
 

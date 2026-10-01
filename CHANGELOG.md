@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `define_gcs_connection` now accepts an HMAC key pair (`hmac_access_id`/`hmac_secret`) as an alternative to `service_account_credentials_json`, matching the Forward CLI's `gcloud_storage_hmac`/`gcloud_storage_sa` distinction. Emitted as `GCS_HMAC_ACCESS_ID`/`GCS_HMAC_SECRET` in the generated `.connection` file and round-tripped by the datafile parser and migration emitter.
+
 ## [0.4.0] - 2026-06-29
 
 ### Added

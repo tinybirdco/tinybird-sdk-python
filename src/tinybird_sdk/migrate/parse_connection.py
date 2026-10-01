@@ -31,6 +31,8 @@ CONNECTION_DIRECTIVES = {
     "S3_ACCESS_KEY",
     "S3_SECRET",
     "GCS_SERVICE_ACCOUNT_CREDENTIALS_JSON",
+    "GCS_HMAC_ACCESS_ID",
+    "GCS_HMAC_SECRET",
     "DYNAMODB_ARN",
     "DYNAMODB_REGION",
 }
@@ -60,6 +62,8 @@ def parse_connection_file(resource: ResourceFile) -> ConnectionModel:
     access_key: str | None = None
     access_secret: str | None = None
     service_account_credentials_json: str | None = None
+    gcs_hmac_access_id: str | None = None
+    gcs_hmac_secret: str | None = None
 
     dynamodb_arn: str | None = None
     dynamodb_region: str | None = None
@@ -125,6 +129,10 @@ def parse_connection_file(resource: ResourceFile) -> ConnectionModel:
             access_secret = parse_quoted_value(value)
         elif name == "GCS_SERVICE_ACCOUNT_CREDENTIALS_JSON":
             service_account_credentials_json = parse_quoted_value(value)
+        elif name == "GCS_HMAC_ACCESS_ID":
+            gcs_hmac_access_id = parse_quoted_value(value)
+        elif name == "GCS_HMAC_SECRET":
+            gcs_hmac_secret = parse_quoted_value(value)
         elif name == "DYNAMODB_ARN":
             dynamodb_arn = parse_quoted_value(value)
         elif name == "DYNAMODB_REGION":
@@ -151,6 +159,8 @@ def parse_connection_file(resource: ResourceFile) -> ConnectionModel:
             or access_key
             or access_secret
             or service_account_credentials_json
+            or gcs_hmac_access_id
+            or gcs_hmac_secret
             or dynamodb_arn
             or dynamodb_region
         ):
@@ -193,6 +203,8 @@ def parse_connection_file(resource: ResourceFile) -> ConnectionModel:
             or schema_registry_url
             or ssl_ca_pem
             or service_account_credentials_json
+            or gcs_hmac_access_id
+            or gcs_hmac_secret
             or dynamodb_arn
             or dynamodb_region
         ):
@@ -261,12 +273,32 @@ def parse_connection_file(resource: ResourceFile) -> ConnectionModel:
                 "Kafka/S3/DynamoDB directives are not valid for gcs connections.",
             )
 
-        if not service_account_credentials_json:
+        has_hmac = bool(gcs_hmac_access_id or gcs_hmac_secret)
+
+        if not service_account_credentials_json and not has_hmac:
             raise MigrationParseError(
                 resource.file_path,
                 "connection",
                 resource.name,
-                "GCS_SERVICE_ACCOUNT_CREDENTIALS_JSON is required for gcs connections.",
+                "gcs connections require GCS_SERVICE_ACCOUNT_CREDENTIALS_JSON or both "
+                "GCS_HMAC_ACCESS_ID and GCS_HMAC_SECRET.",
+            )
+
+        if service_account_credentials_json and has_hmac:
+            raise MigrationParseError(
+                resource.file_path,
+                "connection",
+                resource.name,
+                "GCS_SERVICE_ACCOUNT_CREDENTIALS_JSON and GCS_HMAC_ACCESS_ID/GCS_HMAC_SECRET are "
+                "mutually exclusive.",
+            )
+
+        if has_hmac and not (gcs_hmac_access_id and gcs_hmac_secret):
+            raise MigrationParseError(
+                resource.file_path,
+                "connection",
+                resource.name,
+                "GCS_HMAC_ACCESS_ID and GCS_HMAC_SECRET must be provided together.",
             )
 
         return GCSConnectionModel(
@@ -275,6 +307,8 @@ def parse_connection_file(resource: ResourceFile) -> ConnectionModel:
             file_path=resource.file_path,
             connection_type="gcs",
             service_account_credentials_json=service_account_credentials_json,
+            hmac_access_id=gcs_hmac_access_id,
+            hmac_secret=gcs_hmac_secret,
         )
 
     if connection_type == "dynamodb":
@@ -291,6 +325,8 @@ def parse_connection_file(resource: ResourceFile) -> ConnectionModel:
             or access_key
             or access_secret
             or service_account_credentials_json
+            or gcs_hmac_access_id
+            or gcs_hmac_secret
         ):
             raise MigrationParseError(
                 resource.file_path,

@@ -550,6 +550,15 @@ landing_gcs = define_gcs_connection(
     },
 )
 
+# Or authenticate with an HMAC key pair instead of a service account:
+landing_gcs_hmac = define_gcs_connection(
+    "landing_gcs_hmac",
+    {
+        "hmac_access_id": secret("GCS_HMAC_ACCESS_ID"),
+        "hmac_secret": secret("GCS_HMAC_SECRET"),
+    },
+)
+
 events_dynamodb = define_dynamodb_connection(
     "events_dynamodb",
     {
