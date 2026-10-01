@@ -8,7 +8,10 @@ import sys
 from .commands.generate import run_generate
 from .commands.init import run_init
 from .commands.migrate import run_migrate
+from .commands.pull import run_pull
 from .output import output
+
+_SDK_OWNED_COMMANDS = {"init", "generate", "migrate", "pull"}
 
 
 def _print_json(payload: object) -> None:
@@ -81,6 +84,18 @@ def create_cli() -> argparse.ArgumentParser:
     )
     migrate_cmd.add_argument("--json", action="store_true", help="Print migration result as JSON")
 
+    pull_cmd = sub.add_parser("pull", help="Pull datafiles for existing resources")
+    pull_cmd.add_argument("-o", "--output-dir", default=".", help="Target folder for pulled files")
+    pull_cmd.add_argument("--force", action="store_true", help="Overwrite existing files")
+    pull_cmd.add_argument(
+        "--as-code",
+        action="store_true",
+        help=(
+            "Generate Python SDK source (datasources.py, pipes.py, client.py) from the live "
+            "workspace instead of raw .datasource/.pipe/.connection files"
+        ),
+    )
+
     return parser
 
 
@@ -88,7 +103,7 @@ def main(argv: list[str] | None = None) -> int:
     normalized_argv = list(argv) if argv is not None else list(sys.argv[1:])
 
     # SDK-owned commands stay local; all other commands are delegated to Tinybird CLI.
-    if not normalized_argv or normalized_argv[0] not in {"init", "generate", "migrate"}:
+    if not normalized_argv or normalized_argv[0] not in _SDK_OWNED_COMMANDS:
         return _run_installed_tinybird_cli(normalized_argv)
 
     parser = create_cli()
@@ -140,6 +155,22 @@ def main(argv: list[str] | None = None) -> int:
         if generate_result.output_dir:
             print(f"Written to: {generate_result.output_dir}")
         print(f"Completed in {output.format_duration(generate_result.duration_ms)}")
+        return 0
+
+    if args.command == "pull":
+        pull_result = run_pull(
+            {"output_dir": args.output_dir, "overwrite": args.force, "as_code": args.as_code}
+        )
+        if not pull_result.success:
+            output.error(pull_result.error or "Pull failed")
+            return 1
+
+        file_count = len(pull_result.files or [])
+        noun = "source files" if args.as_code else "datafiles"
+        print(f"Pulled {file_count} {noun}")
+        if pull_result.output_dir:
+            print(f"Written to: {pull_result.output_dir}")
+        print(f"Completed in {output.format_duration(pull_result.duration_ms)}")
         return 0
 
     migrate_result = run_migrate(

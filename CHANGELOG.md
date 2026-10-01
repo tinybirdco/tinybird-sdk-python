@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `tinybird pull --as-code` generates Python SDK source (`datasources.py`, `pipes.py`, `client.py`) from the live workspace via the existing `codegen` module, instead of raw `.datasource`/`.pipe`/`.connection` files. This wires up `codegen`, which was previously unreachable from any CLI command.
+
 ## [0.4.0] - 2026-06-29
 
 ### Added

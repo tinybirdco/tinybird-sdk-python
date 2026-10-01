@@ -7,6 +7,7 @@ import pytest
 import tinybird_sdk.cli.commands.deploy as deploy_cmd
 import tinybird_sdk.cli.commands.dev as dev_cmd
 import tinybird_sdk.cli.commands.pull as pull_cmd
+from tinybird_sdk.api.resources import DatasourceColumn, DatasourceEngine, DatasourceInfo
 from tinybird_sdk.cli.commands.build import run_build
 from tinybird_sdk.cli.commands.deploy import run_deploy
 from tinybird_sdk.cli.commands.init import run_init
@@ -114,3 +115,48 @@ def test_pull_migrate_and_dev_once_workflow(
     )
     dev_result = dev_cmd.run_dev({"cwd": str(tmp_path), "once": True})
     assert dev_result["success"] is True
+
+
+def test_pull_as_code_generates_python_source(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("TINYBIRD_TOKEN", "p.workspace")
+    monkeypatch.setenv("TINYBIRD_URL", "https://api.tinybird.co")
+    (tmp_path / "tinybird.config.json").write_text(
+        '{"include":["lib/*.py"],"token":"${TINYBIRD_TOKEN}","base_url":"${TINYBIRD_URL}"}\n',
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        pull_cmd,
+        "fetch_all_resources",
+        lambda *_args, **_kwargs: {
+            "datasources": [
+                DatasourceInfo(
+                    name="events",
+                    columns=[DatasourceColumn(name="id", type="Int32")],
+                    engine=DatasourceEngine(type="MergeTree", sorting_key="id"),
+                )
+            ],
+            "pipes": [],
+        },
+    )
+
+    pull_result = run_pull(
+        {"cwd": str(tmp_path), "output_dir": "out", "overwrite": True, "as_code": True}
+    )
+    assert pull_result.success is True
+    assert pull_result.stats == {
+        "datasources": 1,
+        "pipes": 0,
+        "connections": 0,
+        "total": 3,
+    }
+
+    written_names = sorted(file.filename for file in pull_result.files or [])
+    assert written_names == ["client.py", "datasources.py", "pipes.py"]
+
+    datasources_content = (tmp_path / "out" / "datasources.py").read_text(encoding="utf-8")
+    assert "define_datasource('events'" in datasources_content
+    pipes_content = (tmp_path / "out" / "pipes.py").read_text(encoding="utf-8")
+    assert "No pipes found in workspace" in pipes_content

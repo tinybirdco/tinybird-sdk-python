@@ -6,7 +6,8 @@ from pathlib import Path
 import time
 from typing import Any, Literal
 
-from ...api.resources import ResourceFile, pull_all_resource_files
+from ...api.resources import ResourceFile, fetch_all_resources, pull_all_resource_files
+from ...codegen.index import generate_all_files
 from ..config import load_config_async
 
 
@@ -15,12 +16,13 @@ class PullCommandOptions:
     cwd: str | None = None
     output_dir: str = "."
     overwrite: bool = False
+    as_code: bool = False
 
 
 @dataclass(frozen=True, slots=True)
 class PulledFileResult:
     name: str
-    type: Literal["datasource", "pipe", "connection"]
+    type: Literal["datasource", "pipe", "connection", "code"]
     filename: str
     path: str
     relative_path: str
@@ -45,6 +47,43 @@ def _flatten_resources(resources: dict[str, list[ResourceFile]]) -> list[Resourc
     ]
 
 
+def _generate_code_files(
+    api_config: dict[str, Any],
+) -> tuple[list[ResourceFile], dict[str, int]]:
+    resources = fetch_all_resources(api_config)
+    datasources = resources["datasources"]
+    pipes = resources["pipes"]
+    generated = generate_all_files(datasources, pipes)
+
+    files = [
+        ResourceFile(
+            name="datasources",
+            type="code",
+            filename="datasources.py",
+            content=generated.datasources_content,
+        ),
+        ResourceFile(
+            name="pipes",
+            type="code",
+            filename="pipes.py",
+            content=generated.pipes_content,
+        ),
+        ResourceFile(
+            name="client",
+            type="code",
+            filename="client.py",
+            content=generated.client_content,
+        ),
+    ]
+    stats = {
+        "datasources": generated.datasource_count,
+        "pipes": generated.pipe_count,
+        "connections": 0,
+        "total": len(files),
+    }
+    return files, stats
+
+
 def run_pull(options: PullCommandOptions | dict[str, Any] | None = None) -> PullCommandResult:
     start = int(time.time() * 1000)
     normalized = (
@@ -64,16 +103,26 @@ def run_pull(options: PullCommandOptions | dict[str, Any] | None = None) -> Pull
             success=False, error=str(error), duration_ms=int(time.time() * 1000) - start
         )
 
+    api_config = {"base_url": config["base_url"], "token": config["token"]}
+
     try:
-        pulled = pull_all_resource_files({"base_url": config["base_url"], "token": config["token"]})
+        if normalized.as_code:
+            all_files, stats = _generate_code_files(api_config)
+        else:
+            pulled = pull_all_resource_files(api_config)
+            all_files = sorted(_flatten_resources(pulled), key=lambda item: item.filename)
+            stats = {
+                "datasources": len(pulled.get("datasources") or []),
+                "pipes": len(pulled.get("pipes") or []),
+                "connections": len(pulled.get("connections") or []),
+                "total": len(all_files),
+            }
     except Exception as error:
         return PullCommandResult(
             success=False,
             error=f"Pull failed: {error}",
             duration_ms=int(time.time() * 1000) - start,
         )
-
-    all_files = sorted(_flatten_resources(pulled), key=lambda item: item.filename)
 
     try:
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -102,12 +151,7 @@ def run_pull(options: PullCommandOptions | dict[str, Any] | None = None) -> Pull
             success=True,
             output_dir=str(output_dir),
             files=written,
-            stats={
-                "datasources": len(pulled.get("datasources") or []),
-                "pipes": len(pulled.get("pipes") or []),
-                "connections": len(pulled.get("connections") or []),
-                "total": len(written),
-            },
+            stats=stats,
             duration_ms=int(time.time() * 1000) - start,
         )
     except FileExistsError as error:
