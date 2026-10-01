@@ -63,10 +63,16 @@ def _generate_s3_connection(connection: S3ConnectionDefinition) -> str:
 
 def _generate_gcs_connection(connection: GCSConnectionDefinition) -> str:
     options = connection.options
-    parts = [
-        "TYPE gcs",
-        f"GCS_SERVICE_ACCOUNT_CREDENTIALS_JSON {options.service_account_credentials_json}",
-    ]
+    parts = ["TYPE gcs"]
+
+    if options.service_account_credentials_json:
+        parts.append(
+            f"GCS_SERVICE_ACCOUNT_CREDENTIALS_JSON {options.service_account_credentials_json}"
+        )
+    if options.hmac_access_id:
+        parts.append(f"GCS_HMAC_ACCESS_ID {options.hmac_access_id}")
+    if options.hmac_secret:
+        parts.append(f"GCS_HMAC_SECRET {options.hmac_secret}")
 
     return "\n".join(parts)
 

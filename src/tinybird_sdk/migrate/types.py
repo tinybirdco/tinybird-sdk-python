@@ -216,7 +216,9 @@ class GCSConnectionModel:
     name: str
     file_path: str
     connection_type: Literal["gcs"]
-    service_account_credentials_json: str
+    service_account_credentials_json: str | None = None
+    hmac_access_id: str | None = None
+    hmac_secret: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
