@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `TinybirdApi.analyze()` wraps the Tinybird Analyze API (`POST /v0/analyze`) to infer column names, ClickHouse types, and (for CSV) dialect from a local file or URL, matching `tb datasource analyze <url_or_file>`.
+- `tinybird_sdk.infer.parse_analyze_response()` and `tinybird_sdk.infer.generate_schema_code()` turn an analyze response into a structured `AnalyzedSchema` and generate ready-to-use `define_datasource(...)` source with `t.*` validators, so a datasource can be scaffolded from real sample data before it's declared in Python.
+
 ## [0.4.0] - 2026-06-29
 
 ### Added
