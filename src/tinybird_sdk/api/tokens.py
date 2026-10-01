@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Any
 
 from .api import TinybirdApiError, create_tinybird_api
+from .async_api import create_async_tinybird_api
 
 
 @dataclass(frozen=True, slots=True)
@@ -67,3 +68,47 @@ def create_jwt(config: TokenApiConfig | dict[str, Any], options: dict[str, Any])
             )
 
         raise TokenApiError(message, error.status_code, response_body) from error
+
+
+async def create_jwt_async(
+    config: TokenApiConfig | dict[str, Any], options: dict[str, Any]
+) -> dict[str, str]:
+    normalized = config if isinstance(config, TokenApiConfig) else TokenApiConfig(**config)
+    expiration_time = _to_unix_timestamp(options["expires_at"])
+
+    body = {
+        "name": options["name"],
+        "scopes": options.get("scopes", []),
+    }
+    if options.get("limits") is not None:
+        body["limits"] = options["limits"]
+
+    api = create_async_tinybird_api(
+        {
+            "base_url": normalized.base_url,
+            "token": normalized.token,
+            "timeout": normalized.timeout,
+        }
+    )
+
+    try:
+        result = await api.create_token(body, {"expiration_time": expiration_time})
+        return {"token": result["token"]}
+    except TinybirdApiError as error:
+        response_body = error.response_body or str(error)
+        if error.status_code == 403:
+            message = (
+                "Permission denied creating JWT token. "
+                "Make sure the token has TOKENS or ADMIN scope. "
+                f"API response: {response_body}"
+            )
+        elif error.status_code == 400:
+            message = f"Invalid JWT token request: {response_body}"
+        else:
+            message = (
+                f"Failed to create JWT token: {error.status_code}. API response: {response_body}"
+            )
+
+        raise TokenApiError(message, error.status_code, response_body) from error
+    finally:
+        await api.aclose()

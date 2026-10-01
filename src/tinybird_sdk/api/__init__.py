@@ -5,6 +5,7 @@ from .api import (
     create_tinybird_api,
     create_tinybird_api_wrapper,
 )
+from .async_api import AsyncTinybirdApi, create_async_tinybird_api
 from .fetcher import (
     TINYBIRD_FROM_PARAM,
     create_tinybird_fetcher,
@@ -74,6 +75,8 @@ __all__ = [
     "TinybirdApiError",
     "create_tinybird_api",
     "create_tinybird_api_wrapper",
+    "AsyncTinybirdApi",
+    "create_async_tinybird_api",
     "create_jwt",
     "TokenApiError",
     "build_to_tinybird",

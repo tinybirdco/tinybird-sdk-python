@@ -7,10 +7,13 @@ import uuid
 from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Any, Mapping
+from typing import TYPE_CHECKING, Any, Mapping
 from urllib.error import HTTPError
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 from urllib.request import Request, urlopen
+
+if TYPE_CHECKING:
+    import httpx
 
 TINYBIRD_FROM_PARAM = "python-sdk"
 
@@ -89,6 +92,40 @@ def tinybird_fetch(
             body=error.read() if error.fp else b"",
         )
     except Exception as error:  # pragma: no cover - network-level failures
+        raise HTTPClientError(str(error)) from error
+
+
+async def tinybird_fetch_async(
+    client: "httpx.AsyncClient",
+    url: str,
+    *,
+    method: str = "GET",
+    headers: Mapping[str, str] | None = None,
+    body: bytes | str | None = None,
+    timeout: float | None = None,
+) -> HTTPResponse:
+    """Async counterpart to `tinybird_fetch`, sharing its request-building (via
+    `with_tinybird_from_param`) and response shape (`HTTPResponse`). Takes an
+    explicit `httpx.AsyncClient` so callers (AsyncTinybirdApi) own the client's
+    lifecycle and connection pool rather than opening one per call.
+    """
+    import httpx
+
+    request_body = body.encode("utf-8") if isinstance(body, str) else body
+    try:
+        response = await client.request(
+            method,
+            with_tinybird_from_param(url),
+            headers=dict(headers or {}),
+            content=request_body,
+            timeout=timeout,
+        )
+        return HTTPResponse(
+            status_code=response.status_code,
+            headers=dict(response.headers),
+            body=response.content,
+        )
+    except httpx.HTTPError as error:
         raise HTTPClientError(str(error)) from error
 
 

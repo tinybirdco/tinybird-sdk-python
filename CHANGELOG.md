@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `AsyncTinybirdClient`/`AsyncTinybirdApi` (and an `AsyncTinybird` facade counterpart to `Tinybird`), covering the same `query`/`ingest`/`ingest_batch`/`sql`/`datasources.*`/`tokens.create_jwt` surface as the sync client, backed by `httpx.AsyncClient` instead of blocking `urllib` calls, so the SDK no longer blocks the event loop when used from async frameworks (FastAPI, aiohttp). Added `httpx` as a runtime dependency. `TinybirdClient`/`TinybirdApi`'s own request/retry/error-handling logic was refactored to share its pure helpers (`src/tinybird_sdk/api/_shared.py`) with the new async client, with no behavior change to the sync path.
+
 ## [0.4.0] - 2026-06-29
 
 ### Added

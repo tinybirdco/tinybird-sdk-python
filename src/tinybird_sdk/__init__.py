@@ -18,6 +18,7 @@ _EXPORTS = {
     "sql": ("tinybird_sdk.schema", "sql"),
     "define_project": ("tinybird_sdk.schema", "define_project"),
     "Tinybird": ("tinybird_sdk.schema", "Tinybird"),
+    "AsyncTinybird": ("tinybird_sdk.schema", "AsyncTinybird"),
     # Schema helpers
     "column": ("tinybird_sdk.schema", "column"),
     "get_column_type": ("tinybird_sdk.schema", "get_column_type"),
@@ -70,6 +71,8 @@ _EXPORTS = {
     # Client
     "TinybirdClient": ("tinybird_sdk.client", "TinybirdClient"),
     "create_client": ("tinybird_sdk.client", "create_client"),
+    "AsyncTinybirdClient": ("tinybird_sdk.client", "AsyncTinybirdClient"),
+    "create_async_client": ("tinybird_sdk.client", "create_async_client"),
     "TinybirdError": ("tinybird_sdk.client", "TinybirdError"),
     "is_preview_environment": ("tinybird_sdk.client", "is_preview_environment"),
     "get_preview_branch_name": ("tinybird_sdk.client", "get_preview_branch_name"),
@@ -80,7 +83,10 @@ _EXPORTS = {
     "create_tinybird_api": ("tinybird_sdk.api.api", "create_tinybird_api"),
     "create_tinybird_api_wrapper": ("tinybird_sdk.api.api", "create_tinybird_api_wrapper"),
     "TinybirdApiError": ("tinybird_sdk.api.api", "TinybirdApiError"),
+    "AsyncTinybirdApi": ("tinybird_sdk.api.async_api", "AsyncTinybirdApi"),
+    "create_async_tinybird_api": ("tinybird_sdk.api.async_api", "create_async_tinybird_api"),
     "create_jwt": ("tinybird_sdk.api.tokens", "create_jwt"),
+    "create_jwt_async": ("tinybird_sdk.api.tokens", "create_jwt_async"),
     "TokenApiError": ("tinybird_sdk.api.tokens", "TokenApiError"),
     "parse_api_url": ("tinybird_sdk.api.dashboard", "parse_api_url"),
     "get_dashboard_url": ("tinybird_sdk.api.dashboard", "get_dashboard_url"),

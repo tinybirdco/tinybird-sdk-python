@@ -1,19 +1,19 @@
 from __future__ import annotations
 
+import asyncio
 import json
-import time
-from dataclasses import dataclass
-from datetime import date, datetime
-from typing import Any
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urlencode, urljoin
 
 from .._http import (
     HTTPClientError,
+    HTTPResponse,
     create_multipart_body,
     detect_data_format,
     normalize_base_url,
     serialize_event_value,
-    tinybird_fetch,
+    tinybird_fetch_async,
     to_query_value,
 )
 from ._shared import (
@@ -23,34 +23,29 @@ from ._shared import (
     resolve_retry_429_delay_ms,
     resolve_retry_503_delay_ms,
 )
+from .api import (
+    DEFAULT_INGEST_RETRY_503_BASE_DELAY_MS,
+    DEFAULT_INGEST_RETRY_503_MAX_DELAY_MS,
+    DEFAULT_TIMEOUT_MS,
+    TinybirdApiConfig,
+    TinybirdApiError,
+)
 
-DEFAULT_TIMEOUT_MS = 30_000
-DEFAULT_INGEST_RETRY_503_BASE_DELAY_MS = 200
-DEFAULT_INGEST_RETRY_503_MAX_DELAY_MS = 3_000
-
-
-@dataclass(frozen=True, slots=True)
-class TinybirdApiConfig:
-    base_url: str
-    token: str
-    timeout: int | None = None
-
-
-class TinybirdApiError(Exception):
-    def __init__(
-        self,
-        message: str,
-        status_code: int,
-        response_body: str | None = None,
-        response: dict[str, Any] | None = None,
-    ):
-        super().__init__(message)
-        self.status_code = status_code
-        self.response_body = response_body
-        self.response = response
+if TYPE_CHECKING:
+    import httpx
 
 
-class TinybirdApi:
+class AsyncTinybirdApi:
+    """Async counterpart to `TinybirdApi`. Same method surface and semantics,
+    backed by `httpx.AsyncClient` instead of blocking `urllib` calls so it is
+    safe to use from async frameworks (FastAPI, aiohttp) without blocking the
+    event loop. Retry/error logic is shared with `TinybirdApi` via `_shared.py`
+    so the two clients can't drift apart.
+
+    Holds a single `httpx.AsyncClient` for connection pooling across calls;
+    close it with `aclose()` or use as an async context manager.
+    """
+
     def __init__(self, config: TinybirdApiConfig | dict[str, Any]):
         normalized = (
             config if isinstance(config, TinybirdApiConfig) else TinybirdApiConfig(**config)
@@ -64,8 +59,27 @@ class TinybirdApi:
         self._base_url = normalize_base_url(normalized.base_url)
         self._default_token = normalized.token
         self._default_timeout = normalized.timeout or DEFAULT_TIMEOUT_MS
+        self._client: "httpx.AsyncClient | None" = None
 
-    def request(
+    def _get_http_client(self) -> "httpx.AsyncClient":
+        if self._client is None:
+            import httpx
+
+            self._client = httpx.AsyncClient()
+        return self._client
+
+    async def aclose(self) -> None:
+        if self._client is not None:
+            await self._client.aclose()
+            self._client = None
+
+    async def __aenter__(self) -> "AsyncTinybirdApi":
+        return self
+
+    async def __aexit__(self, *exc_info: object) -> None:
+        await self.aclose()
+
+    async def request(
         self,
         path: str,
         *,
@@ -74,7 +88,7 @@ class TinybirdApi:
         headers: dict[str, str] | None = None,
         body: bytes | str | None = None,
         timeout: int | None = None,
-    ):
+    ) -> HTTPResponse:
         url = self._resolve_url(path)
         request_headers = dict(headers or {})
         if "Authorization" not in request_headers:
@@ -83,7 +97,8 @@ class TinybirdApi:
         timeout_seconds = self._timeout_seconds(timeout)
 
         try:
-            return tinybird_fetch(
+            return await tinybird_fetch_async(
+                self._get_http_client(),
                 url,
                 method=method,
                 headers=request_headers,
@@ -93,7 +108,7 @@ class TinybirdApi:
         except HTTPClientError as error:
             raise TinybirdApiError(str(error), 0) from error
 
-    def request_json(
+    async def request_json(
         self,
         path: str,
         *,
@@ -103,7 +118,7 @@ class TinybirdApi:
         body: bytes | str | None = None,
         timeout: int | None = None,
     ) -> Any:
-        response = self.request(
+        response = await self.request(
             path,
             method=method,
             token=token,
@@ -115,7 +130,7 @@ class TinybirdApi:
             self._raise_for_error(response.status_code, response.text)
         return response.json()
 
-    def query(
+    async def query(
         self,
         endpoint_name: str,
         params: dict[str, Any] | None = None,
@@ -131,8 +146,6 @@ class TinybirdApi:
             if isinstance(value, (list, tuple)):
                 for item in value:
                     query_params.append((key, to_query_value(item)))
-            elif isinstance(value, (datetime, date)):
-                query_params.append((key, value.isoformat()))
             else:
                 query_params.append((key, to_query_value(value)))
 
@@ -141,7 +154,7 @@ class TinybirdApi:
         if query:
             path = f"{path}?{query}"
 
-        response = self.request(
+        response = await self.request(
             path,
             method="GET",
             token=options.get("token"),
@@ -151,15 +164,15 @@ class TinybirdApi:
             self._raise_for_error(response.status_code, response.text)
         return response.json()
 
-    def ingest(
+    async def ingest(
         self,
         datasource_name: str,
         event: dict[str, Any],
         options: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        return self.ingest_batch(datasource_name, [event], options)
+        return await self.ingest_batch(datasource_name, [event], options)
 
-    def ingest_batch(
+    async def ingest_batch(
         self,
         datasource_name: str,
         events: list[dict[str, Any]],
@@ -177,11 +190,11 @@ class TinybirdApi:
         if options.get("wait", True):
             query["wait"] = "true"
 
-        max_retries = self._resolve_ingest_max_retries(options)
+        max_retries = resolve_ingest_max_retries(options)
         retry_count = 0
 
         while True:
-            response = self.request(
+            response = await self.request(
                 f"/v0/events?{urlencode(query)}",
                 method="POST",
                 token=options.get("token"),
@@ -192,27 +205,31 @@ class TinybirdApi:
             if response.ok:
                 return response.json()
 
-            retry_429_delay_ms = self._resolve_retry_429_delay_ms(
+            retry_429_delay_ms = resolve_retry_429_delay_ms(
                 response.status_code, response.headers, max_retries, retry_count
             )
             if retry_429_delay_ms is not None:
-                self._sleep_ms(retry_429_delay_ms)
+                await self._sleep_ms(retry_429_delay_ms)
                 retry_count += 1
                 continue
 
-            retry_503_delay_ms = self._resolve_retry_503_delay_ms(
-                response.status_code, max_retries, retry_count
+            retry_503_delay_ms = resolve_retry_503_delay_ms(
+                response.status_code,
+                max_retries,
+                retry_count,
+                base_delay_ms=DEFAULT_INGEST_RETRY_503_BASE_DELAY_MS,
+                max_delay_ms=DEFAULT_INGEST_RETRY_503_MAX_DELAY_MS,
             )
             if retry_503_delay_ms is not None:
-                self._sleep_ms(retry_503_delay_ms)
+                await self._sleep_ms(retry_503_delay_ms)
                 retry_count += 1
                 continue
 
             self._raise_for_error(response.status_code, response.text)
 
-    def sql(self, sql: str, options: dict[str, Any] | None = None) -> dict[str, Any]:
+    async def sql(self, sql: str, options: dict[str, Any] | None = None) -> dict[str, Any]:
         options = options or {}
-        response = self.request(
+        response = await self.request(
             "/v0/sql",
             method="POST",
             token=options.get("token"),
@@ -224,7 +241,7 @@ class TinybirdApi:
             self._raise_for_error(response.status_code, response.text)
         return response.json()
 
-    def append_datasource(
+    async def append_datasource(
         self,
         datasource_name: str,
         options: dict[str, Any],
@@ -263,7 +280,7 @@ class TinybirdApi:
 
         if source_url_str:
             body = urlencode({"url": source_url_str})
-            response = self.request(
+            response = await self.request(
                 f"/v0/datasources?{urlencode(query)}",
                 method="POST",
                 token=api_options.get("token"),
@@ -274,12 +291,12 @@ class TinybirdApi:
         else:
             if not file_path_str:
                 raise ValueError("'file' must be a valid string path")
-            with open(file_path_str, "rb") as fp:
-                file_content = fp.read()
+            # Local disk read, offloaded to a thread so it never blocks the event loop.
+            file_content = await asyncio.to_thread(Path(file_path_str).read_bytes)
             content_type, multipart = create_multipart_body(
                 files=[("csv", file_path_str, file_content, None)],
             )
-            response = self.request(
+            response = await self.request(
                 f"/v0/datasources?{urlencode(query)}",
                 method="POST",
                 token=api_options.get("token"),
@@ -292,7 +309,7 @@ class TinybirdApi:
             self._raise_for_error(response.status_code, response.text)
         return response.json()
 
-    def delete_datasource(
+    async def delete_datasource(
         self,
         datasource_name: str,
         options: dict[str, Any],
@@ -308,7 +325,7 @@ class TinybirdApi:
         if dry_run is not None:
             body["dry_run"] = str(dry_run).lower()
 
-        response = self.request(
+        response = await self.request(
             f"/v0/datasources/{datasource_name}/delete",
             method="POST",
             token=api_options.get("token"),
@@ -320,7 +337,7 @@ class TinybirdApi:
             self._raise_for_error(response.status_code, response.text)
         return response.json()
 
-    def truncate_datasource(
+    async def truncate_datasource(
         self,
         datasource_name: str,
         options: dict[str, Any] | None = None,
@@ -328,7 +345,7 @@ class TinybirdApi:
     ) -> dict[str, Any]:
         options = options or {}
         api_options = api_options or {}
-        response = self.request(
+        response = await self.request(
             f"/v0/datasources/{datasource_name}/truncate",
             method="POST",
             token=api_options.get("token"),
@@ -344,7 +361,7 @@ class TinybirdApi:
         except json.JSONDecodeError:
             return {}
 
-    def create_token(
+    async def create_token(
         self,
         body: dict[str, Any],
         options: dict[str, Any] | None = None,
@@ -356,7 +373,7 @@ class TinybirdApi:
         if expiration_time is not None:
             path = f"{path}?{urlencode({'expiration_time': str(expiration_time)})}"
 
-        response = self.request(
+        response = await self.request(
             path,
             method="POST",
             token=options.get("token"),
@@ -380,36 +397,13 @@ class TinybirdApi:
     def _serialize_event(self, event: dict[str, Any]) -> dict[str, Any]:
         return {key: serialize_event_value(value) for key, value in event.items()}
 
-    def _resolve_ingest_max_retries(self, options: dict[str, Any]) -> int | None:
-        return resolve_ingest_max_retries(options)
-
-    def _resolve_retry_429_delay_ms(
-        self,
-        status_code: int,
-        headers: dict[str, str] | Any,
-        max_retries: int | None,
-        retry_count: int,
-    ) -> int | None:
-        return resolve_retry_429_delay_ms(status_code, headers, max_retries, retry_count)
-
-    def _resolve_retry_503_delay_ms(
-        self, status_code: int, max_retries: int | None, retry_count: int
-    ) -> int | None:
-        return resolve_retry_503_delay_ms(
-            status_code,
-            max_retries,
-            retry_count,
-            base_delay_ms=DEFAULT_INGEST_RETRY_503_BASE_DELAY_MS,
-            max_delay_ms=DEFAULT_INGEST_RETRY_503_MAX_DELAY_MS,
-        )
-
     def _get_header(self, headers: dict[str, str] | Any, header_name: str) -> str | None:
         return get_header(headers, header_name)
 
-    def _sleep_ms(self, delay_ms: int) -> None:
+    async def _sleep_ms(self, delay_ms: int) -> None:
         if delay_ms <= 0:
             return
-        time.sleep(delay_ms / 1000.0)
+        await asyncio.sleep(delay_ms / 1000.0)
 
     def _raise_for_error(self, status_code: int, body: str) -> None:
         info = build_api_error_info(status_code, body)
@@ -421,12 +415,5 @@ class TinybirdApi:
         )
 
 
-def create_tinybird_api(config: TinybirdApiConfig | dict[str, Any]) -> TinybirdApi:
-    return TinybirdApi(config)
-
-
-create_tinybird_api_wrapper = create_tinybird_api
-
-# Aliases for backwards compatibility
-create_tinybird_api = create_tinybird_api
-create_tinybird_api_wrapper = create_tinybird_api
+def create_async_tinybird_api(config: TinybirdApiConfig | dict[str, Any]) -> AsyncTinybirdApi:
+    return AsyncTinybirdApi(config)
