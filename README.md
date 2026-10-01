@@ -303,6 +303,70 @@ workspace_response = api.request_json(
 
 This Tinybird API is standalone and can be used without `create_client()` or `Tinybird(...)`.
 
+## Async Client
+
+Every client layer (`create_client`/`TinybirdClient`, `Tinybird`, and the low-level
+`create_tinybird_api`/`TinybirdApi`) has an async counterpart backed by `httpx.AsyncClient`
+instead of blocking `urllib` calls, so it won't block the event loop when called from
+async frameworks like FastAPI or aiohttp. Method names and options are identical to the
+sync client — just `await` them:
+
+```python
+# app.py
+from fastapi import FastAPI
+from tinybird_sdk import create_async_client
+
+app = FastAPI()
+client = create_async_client(
+    {
+        "base_url": "https://api.tinybird.co",
+        "token": "p.your_token",
+    }
+)
+
+
+@app.post("/events")
+async def ingest_event(event: dict):
+    return await client.ingest("events", event)
+
+
+@app.get("/top_pages")
+async def top_pages(start_date: str, end_date: str):
+    return await client.query("top_pages", {"start_date": start_date, "end_date": end_date})
+
+
+@app.on_event("shutdown")
+async def shutdown() -> None:
+    await client.aclose()
+```
+
+`AsyncTinybird` is the async counterpart to the generated `Tinybird(...)` facade — construct
+it directly with the same `datasources`/`pipes` dicts your project's generated code already
+exposes (the code generator still emits the sync `Tinybird(...)` by default):
+
+```python
+from fastapi import FastAPI
+from tinybird_sdk import AsyncTinybird
+from lib.datasources import events
+from lib.pipes import top_pages
+
+app = FastAPI()
+tinybird = AsyncTinybird({"datasources": {"events": events}, "pipes": {"top_pages": top_pages}})
+
+
+@app.post("/events")
+async def ingest_event(event: dict):
+    return await tinybird.events.ingest(event)
+```
+
+The low-level `AsyncTinybirdApi` (via `create_async_tinybird_api`) is also available
+standalone, mirroring `create_tinybird_api()`'s methods as `async def`.
+
+Note: creating or resolving a Tinybird branch (`dev_mode=True`) still goes through the
+synchronous branch-management API under the hood (branch creation can take up to a couple
+of minutes to provision), offloaded via a background thread so it doesn't block the event
+loop — it's a one-time setup cost, not a per-request one.
+
 ## JWT Token Creation
 
 Create short-lived JWT tokens for secure scoped access to Tinybird resources.
