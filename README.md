@@ -350,6 +350,35 @@ jwt_token = result["token"]
 - **`fixed_params`**: For pipes, embed parameters that cannot be overridden by the caller.
 - **`filter`**: For datasources, append a SQL WHERE clause (for example, `"org_id = 'acme'"`).
 
+## Job Management
+
+Check status, cancel, or retry async jobs started by `append`/`replace` or connector syncs.
+
+```python
+from tinybird_sdk import create_client
+
+client = create_client(
+    {
+        "base_url": "https://api.tinybird.co",
+        "token": "p.your_admin_token",
+    }
+)
+
+# List jobs, optionally filtered
+jobs = client.jobs.list({"status": "error", "kind": "import"})
+
+# Get a single job's status
+job = client.jobs.get("job_id")
+
+# Cancel a running job
+client.jobs.cancel("job_id")
+
+# Retry an eligible import/S3/GCS sync job in error or cancelled state
+client.jobs.retry("job_id")
+```
+
+`TinybirdApi` exposes the same operations directly as `list_jobs()`, `get_job()`, `cancel_job()`, and `retry_job()`. Retry eligibility (job kind and state) is enforced by the Tinybird API, not duplicated client-side — an ineligible retry raises a `TinybirdError`/`TinybirdApiError` with the API's own message.
+
 ## CLI Commands
 
 This package installs `tinybird` as a runtime dependency.

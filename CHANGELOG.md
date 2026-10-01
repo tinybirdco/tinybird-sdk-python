@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `TinybirdClient.jobs` namespace (`list`/`get`/`cancel`/`retry`) and matching `TinybirdApi.list_jobs()`/`get_job()`/`cancel_job()`/`retry_job()` methods, wrapping `/v0/jobs`. Lets code that triggers async jobs itself (`append`/`replace`, connector syncs) check status, cancel, or retry them afterward, matching `tb job ls/details/cancel/retry`. Retry eligibility (job kind/state) is enforced by the API, not duplicated client-side.
+
 ## [0.4.0] - 2026-06-29
 
 ### Added
