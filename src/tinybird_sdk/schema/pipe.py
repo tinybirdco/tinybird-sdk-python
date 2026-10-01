@@ -4,7 +4,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
-from .connection import KafkaConnectionDefinition, S3ConnectionDefinition
+from .connection import GCSConnectionDefinition, KafkaConnectionDefinition, S3ConnectionDefinition
 from .datasource import ColumnDefinition, DatasourceDefinition, SchemaDefinition, get_column_type
 from .params import ParamValidator
 from .token import TokenDefinition
@@ -70,7 +70,18 @@ class S3SinkConfig:
     compression: SinkCompression | None = None
 
 
-SinkConfig = KafkaSinkConfig | S3SinkConfig
+@dataclass(frozen=True, slots=True)
+class GCSSinkConfig:
+    connection: GCSConnectionDefinition
+    bucket_uri: str
+    file_template: str
+    format: str
+    schedule: str
+    strategy: SinkStrategy | None = None
+    compression: SinkCompression | None = None
+
+
+SinkConfig = KafkaSinkConfig | S3SinkConfig | GCSSinkConfig
 
 
 @dataclass(frozen=True, slots=True)
@@ -299,7 +310,17 @@ def _normalize_sink_config(raw: dict[str, Any]) -> SinkConfig:
             strategy=raw.get("strategy"),
             compression=raw.get("compression"),
         )
-    raise ValueError("Sink connection must be a Kafka or S3 connection definition.")
+    if isinstance(connection, GCSConnectionDefinition):
+        return GCSSinkConfig(
+            connection=connection,
+            bucket_uri=raw["bucket_uri"],
+            file_template=raw["file_template"],
+            format=raw["format"],
+            schedule=raw["schedule"],
+            strategy=raw.get("strategy"),
+            compression=raw.get("compression"),
+        )
+    raise ValueError("Sink connection must be a Kafka, S3, or GCS connection definition.")
 
 
 def define_sink_pipe(name: str, options: dict[str, Any]) -> PipeDefinition:

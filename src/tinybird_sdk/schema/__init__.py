@@ -81,6 +81,7 @@ from .pipe import (
     CopyConfig,
     KafkaSinkConfig,
     S3SinkConfig,
+    GCSSinkConfig,
     SinkConfig,
     NodeDefinition,
 )

@@ -14,6 +14,7 @@ from .types import (
     ParsedResource,
     PipeModel,
     S3ConnectionModel,
+    SinkGCSModel,
     SinkKafkaModel,
     SinkS3Model,
 )
@@ -427,7 +428,7 @@ def _emit_pipe(pipe: PipeModel) -> str:
         if isinstance(pipe.sink, SinkKafkaModel):
             lines.append(f"        'topic': {_escape_string(pipe.sink.topic)},")
             lines.append(f"        'schedule': {_escape_string(pipe.sink.schedule)},")
-        elif isinstance(pipe.sink, SinkS3Model):
+        elif isinstance(pipe.sink, (SinkS3Model, SinkGCSModel)):
             lines.append(f"        'bucket_uri': {_escape_string(pipe.sink.bucket_uri)},")
             lines.append(f"        'file_template': {_escape_string(pipe.sink.file_template)},")
             lines.append(f"        'schedule': {_escape_string(pipe.sink.schedule)},")

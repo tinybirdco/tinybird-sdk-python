@@ -14,6 +14,7 @@ from .types import (
     PipeModel,
     SinkKafkaModel,
     SinkS3Model,
+    SinkGCSModel,
     SinkModel,
     KafkaConnectionModel,
     S3ConnectionModel,

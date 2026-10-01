@@ -254,7 +254,10 @@ def run_migrate(options: MigrateOptions | dict[str, Any]) -> MigrationResult:
                 )
                 continue
 
-            if pipe.sink and sink_connection_type != pipe.sink.service:
+            # The "gcs_hmac" sink service exports via a plain "gcs" connection.
+            sink_service = pipe.sink.service if pipe.sink else None
+            expected_connection_type = "gcs" if sink_service == "gcs_hmac" else sink_service
+            if pipe.sink and sink_connection_type != expected_connection_type:
                 errors.append(
                     MigrationError(
                         file_path=pipe.file_path,

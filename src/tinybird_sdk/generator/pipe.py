@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from ..schema.pipe import (
     CopyConfig,
     EndpointConfig,
+    GCSSinkConfig,
     KafkaSinkConfig,
     MaterializedConfig,
     PipeDefinition,
@@ -75,6 +76,18 @@ def _generate_sink(config: SinkConfig) -> str:
         parts.append(f"EXPORT_KAFKA_TOPIC {config.topic}")
         parts.append(f"EXPORT_SCHEDULE {config.schedule}")
     elif isinstance(config, S3SinkConfig):
+        parts.append(f"EXPORT_BUCKET_URI {config.bucket_uri}")
+        parts.append(f"EXPORT_FILE_TEMPLATE {config.file_template}")
+        parts.append(f"EXPORT_SCHEDULE {config.schedule}")
+        parts.append(f"EXPORT_FORMAT {config.format}")
+        if config.strategy:
+            parts.append(f"EXPORT_STRATEGY {config.strategy}")
+        if config.compression:
+            parts.append(f"EXPORT_COMPRESSION {config.compression}")
+    elif isinstance(config, GCSSinkConfig):
+        # GCS and S3 sinks share the same EXPORT_* directive shape, so EXPORT_SERVICE
+        # must be emitted explicitly to disambiguate gcs_hmac from s3 on re-parse.
+        parts.append("EXPORT_SERVICE gcs_hmac")
         parts.append(f"EXPORT_BUCKET_URI {config.bucket_uri}")
         parts.append(f"EXPORT_FILE_TEMPLATE {config.file_template}")
         parts.append(f"EXPORT_SCHEDULE {config.schedule}")
