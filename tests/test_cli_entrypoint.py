@@ -15,6 +15,16 @@ def _mute_output(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(cli_index.output, "error", lambda *args, **kwargs: None)
 
 
+def _deny_delegation(monkeypatch: pytest.MonkeyPatch, command: str) -> None:
+    monkeypatch.setattr(
+        cli_index,
+        "_run_installed_tinybird_cli",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError(f"should not delegate {command}")
+        ),
+    )
+
+
 def _install_fake_tinybird_cli(monkeypatch: pytest.MonkeyPatch, main_impl) -> None:
     tinybird_pkg = types.ModuleType("tinybird")
     tinybird_pkg.__path__ = []
@@ -210,3 +220,211 @@ def test_cli_entrypoint_migrate_failure_returns_error(monkeypatch: pytest.Monkey
         lambda *_args, **_kwargs: {"success": False, "errors": ["boom"]},
     )
     assert cli_index.main(["migrate", "legacy.datasource"]) == 1
+
+
+def test_cli_entrypoint_branch_list(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _deny_delegation(monkeypatch, "branch")
+    monkeypatch.setattr(
+        cli_index,
+        "run_branch_list",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            success=True, branches=[{"name": "main"}, {"name": "feature_x"}], error=None
+        ),
+    )
+    assert cli_index.main(["branch", "list"]) == 0
+    out = capsys.readouterr().out
+    assert "main" in out
+    assert "feature_x" in out
+
+
+def test_cli_entrypoint_branch_list_failure_returns_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _mute_output(monkeypatch)
+    _deny_delegation(monkeypatch, "branch")
+    monkeypatch.setattr(
+        cli_index,
+        "run_branch_list",
+        lambda *_args, **_kwargs: SimpleNamespace(success=False, branches=[], error="boom"),
+    )
+    assert cli_index.main(["branch", "list"]) == 1
+
+
+def test_cli_entrypoint_branch_status(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _deny_delegation(monkeypatch, "branch")
+    calls: list[str | None] = []
+
+    def fake_run_branch_status(name: str | None = None, *_args, **_kwargs) -> SimpleNamespace:
+        calls.append(name)
+        return SimpleNamespace(success=True, branch={"name": name, "id": "br_1"}, error=None)
+
+    monkeypatch.setattr(cli_index, "run_branch_status", fake_run_branch_status)
+
+    assert cli_index.main(["branch", "status", "feature_x"]) == 0
+    assert calls == ["feature_x"]
+    out = capsys.readouterr().out
+    assert '"name": "feature_x"' in out
+
+
+def test_cli_entrypoint_branch_status_defaults_to_no_name(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _deny_delegation(monkeypatch, "branch")
+    calls: list[str | None] = []
+
+    def fake_run_branch_status(name: str | None = None, *_args, **_kwargs) -> SimpleNamespace:
+        calls.append(name)
+        return SimpleNamespace(success=True, branch={"name": "main"}, error=None)
+
+    monkeypatch.setattr(cli_index, "run_branch_status", fake_run_branch_status)
+
+    assert cli_index.main(["branch", "status"]) == 0
+    assert calls == [None]
+
+
+def test_cli_entrypoint_branch_delete(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _deny_delegation(monkeypatch, "branch")
+    calls: list[str] = []
+
+    def fake_run_branch_delete(name: str, *_args, **_kwargs) -> SimpleNamespace:
+        calls.append(name)
+        return SimpleNamespace(success=True, deleted=True, error=None)
+
+    monkeypatch.setattr(cli_index, "run_branch_delete", fake_run_branch_delete)
+
+    assert cli_index.main(["branch", "delete", "feature_x"]) == 0
+    assert calls == ["feature_x"]
+    out = capsys.readouterr().out
+    assert "feature_x" in out
+
+
+def test_cli_entrypoint_branch_delete_failure_returns_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _mute_output(monkeypatch)
+    _deny_delegation(monkeypatch, "branch")
+    monkeypatch.setattr(
+        cli_index,
+        "run_branch_delete",
+        lambda *_args, **_kwargs: SimpleNamespace(success=False, deleted=False, error="boom"),
+    )
+    assert cli_index.main(["branch", "delete", "feature_x"]) == 1
+
+
+def test_cli_entrypoint_info(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from tinybird_sdk.cli.commands.info import InfoCommandResult
+
+    _deny_delegation(monkeypatch, "info")
+    monkeypatch.setattr(
+        cli_index,
+        "run_info",
+        lambda *_args, **_kwargs: InfoCommandResult(
+            success=True,
+            cloud={"base_url": "https://api.tinybird.co"},
+            local={"running": False},
+            branch={"git_branch": "main"},
+            project={"resources": {"datasources": 1, "pipes": 2}},
+            branches=[],
+        ),
+    )
+    assert cli_index.main(["info"]) == 0
+    out = capsys.readouterr().out
+    assert "api.tinybird.co" in out
+
+
+def test_cli_entrypoint_info_json(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from tinybird_sdk.cli.commands.info import InfoCommandResult
+
+    _deny_delegation(monkeypatch, "info")
+    monkeypatch.setattr(
+        cli_index,
+        "run_info",
+        lambda *_args, **_kwargs: InfoCommandResult(
+            success=True, cloud=None, local=None, branch=None, project=None, branches=None
+        ),
+    )
+    assert cli_index.main(["info", "--json"]) == 0
+    out = capsys.readouterr().out
+    assert '"success": true' in out
+
+
+def test_cli_entrypoint_info_failure_returns_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    from tinybird_sdk.cli.commands.info import InfoCommandResult
+
+    _mute_output(monkeypatch)
+    _deny_delegation(monkeypatch, "info")
+    monkeypatch.setattr(
+        cli_index,
+        "run_info",
+        lambda *_args, **_kwargs: InfoCommandResult(
+            success=False,
+            cloud=None,
+            local=None,
+            branch=None,
+            project=None,
+            branches=None,
+            error="boom",
+        ),
+    )
+    assert cli_index.main(["info"]) == 1
+
+
+def test_cli_entrypoint_preview(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _deny_delegation(monkeypatch, "preview")
+    calls: list[dict] = []
+
+    def fake_run_preview(options: dict) -> SimpleNamespace:
+        calls.append(options)
+        return SimpleNamespace(
+            success=True,
+            duration_ms=10,
+            error=None,
+            branch={"name": "tmp_ci_feature_x", "url": "https://api.tinybird.co"},
+            build=None,
+            deploy=None,
+        )
+
+    monkeypatch.setattr(cli_index, "run_preview", fake_run_preview)
+
+    assert cli_index.main(["preview", "--check", "--name", "custom", "--local"]) == 0
+    assert calls == [
+        {"dry_run": False, "check": True, "name": "custom", "dev_mode_override": "local"}
+    ]
+    out = capsys.readouterr().out
+    assert "Preview completed" in out
+    assert "tmp_ci_feature_x" in out
+
+
+def test_cli_entrypoint_preview_failure_returns_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    _mute_output(monkeypatch)
+    _deny_delegation(monkeypatch, "preview")
+    monkeypatch.setattr(
+        cli_index,
+        "run_preview",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            success=False, duration_ms=1, error="boom", branch=None, build=None, deploy=None
+        ),
+    )
+    assert cli_index.main(["preview"]) == 1
+
+
+def test_cli_entrypoint_preview_rejects_local_and_branch_together() -> None:
+    with pytest.raises(SystemExit):
+        cli_index.main(["preview", "--local", "--branch"])
+
+
+def test_cli_entrypoint_branch_requires_subcommand() -> None:
+    with pytest.raises(SystemExit):
+        cli_index.main(["branch"])

@@ -429,6 +429,19 @@ tinybird info
 tinybird info --json
 ```
 
+### `tinybird preview`
+
+Builds the project and deploys it to a temporary preview branch (named `tmp_ci_<git-branch>` by default), mirroring what CI preview environments do.
+
+```bash
+tinybird preview
+tinybird preview --dry-run
+tinybird preview --check
+tinybird preview --name my-preview
+tinybird preview --local
+tinybird preview --branch
+```
+
 ## Configuration
 
 Create a `tinybird.config.json` (or `tinybird.config.py` / `tinybird_config.py` for dynamic logic) in your project root:
