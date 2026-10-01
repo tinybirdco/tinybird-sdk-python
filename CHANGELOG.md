@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `TinybirdClient.secrets` namespace (`list`/`set`/`remove`), wrapping `/v0/variables` to manage the values behind the `secret()` placeholder helper, matching `tb secret ls/set/rm`. `set` creates the secret if it doesn't exist yet, otherwise updates its value; secret values are never returned by `list` or included in error messages.
+
 ## [0.4.0] - 2026-06-29
 
 ### Added

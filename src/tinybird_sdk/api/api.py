@@ -363,6 +363,86 @@ class TinybirdApi:
             self._raise_for_error(response.status_code, response.text)
         return response.json()
 
+    def list_secrets(self, options: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+        """List secrets. Only name/created_at/updated_at are returned; values are never exposed."""
+        options = options or {}
+        response = self.request(
+            "/v0/variables",
+            method="GET",
+            token=options.get("token"),
+            timeout=options.get("timeout"),
+        )
+        if not response.ok:
+            self._raise_for_error(response.status_code, response.text)
+        data = response.json()
+        return data.get("variables", []) if isinstance(data, dict) else data
+
+    def set_secret(
+        self,
+        name: str,
+        value: str,
+        options: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Create the secret if it doesn't exist yet, otherwise update its value."""
+        options = options or {}
+        token = options.get("token")
+        timeout = options.get("timeout")
+
+        existing_response = self.request(
+            f"/v0/variables/{name}", method="GET", token=token, timeout=timeout
+        )
+        if existing_response.ok:
+            exists = True
+        elif existing_response.status_code == 404:
+            exists = False
+        else:
+            self._raise_for_error(existing_response.status_code, existing_response.text)
+            exists = False  # unreachable, _raise_for_error always raises
+
+        if exists:
+            response = self.request(
+                f"/v0/variables/{name}",
+                method="PUT",
+                token=token,
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                body=urlencode({"value": value}),
+                timeout=timeout,
+            )
+        else:
+            response = self.request(
+                "/v0/variables",
+                method="POST",
+                token=token,
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                body=urlencode({"name": name, "value": value}),
+                timeout=timeout,
+            )
+        if not response.ok:
+            self._raise_for_error(response.status_code, response.text)
+        if not response.text.strip():
+            return {}
+        try:
+            return response.json()
+        except json.JSONDecodeError:
+            return {}
+
+    def delete_secret(self, name: str, options: dict[str, Any] | None = None) -> dict[str, Any]:
+        options = options or {}
+        response = self.request(
+            f"/v0/variables/{name}",
+            method="DELETE",
+            token=options.get("token"),
+            timeout=options.get("timeout"),
+        )
+        if not response.ok:
+            self._raise_for_error(response.status_code, response.text)
+        if not response.text.strip():
+            return {}
+        try:
+            return response.json()
+        except json.JSONDecodeError:
+            return {}
+
     def _timeout_seconds(self, timeout_ms: int | None) -> float:
         timeout = timeout_ms if timeout_ms is not None else self._default_timeout
         return max(timeout / 1000.0, 0.001)
