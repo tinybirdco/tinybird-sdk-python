@@ -160,7 +160,19 @@ class SinkS3Model:
     compression: Literal["none", "gzip", "snappy"] | None = None
 
 
-SinkModel = SinkKafkaModel | SinkS3Model
+@dataclass(frozen=True, slots=True)
+class SinkGCSModel:
+    service: Literal["gcs_hmac"]
+    connection_name: str
+    bucket_uri: str
+    file_template: str
+    format: str
+    schedule: str
+    strategy: Literal["create_new", "replace"] | None = None
+    compression: Literal["none", "gzip", "snappy"] | None = None
+
+
+SinkModel = SinkKafkaModel | SinkS3Model | SinkGCSModel
 
 
 @dataclass(frozen=True, slots=True)

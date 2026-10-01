@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `define_sink_pipe` now supports GCS as a sink/export destination, matching the Forward CLI's `gcs_hmac` export service. Add a `GCSConnectionDefinition` as the sink's `connection` and the same `bucket_uri`/`file_template`/`format`/`schedule`/`strategy`/`compression` options already used for S3 sinks; the datafile emitter writes an explicit `EXPORT_SERVICE gcs_hmac` directive (since GCS and S3 sinks otherwise share identical `EXPORT_*` directives) and the migration parser/emitter round-trip it accordingly.
+
 ## [0.4.0] - 2026-06-29
 
 ### Added

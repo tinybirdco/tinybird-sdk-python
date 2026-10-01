@@ -772,7 +772,7 @@ manual_report = define_copy_pipe(
 ### Sink Pipes
 
 Use sink pipes to publish query results to external systems.
-The SDK supports Kafka and S3 sinks.
+The SDK supports Kafka, S3, and GCS sinks.
 
 ```python
 from tinybird_sdk import define_sink_pipe, node
@@ -815,6 +815,30 @@ s3_events_sink = define_sink_pipe(
                 {
                     "name": "export",
                     "sql": "SELECT timestamp, session_id FROM s3_landing",
+                }
+            )
+        ],
+    },
+)
+
+# GCS sink
+gcs_events_sink = define_sink_pipe(
+    "gcs_events_sink",
+    {
+        "sink": {
+            "connection": landing_gcs,
+            "bucket_uri": "gs://my-bucket/exports/",
+            "file_template": "events_{date}",
+            "format": "csv",
+            "schedule": "@once",
+            "strategy": "create_new",
+            "compression": "gzip",
+        },
+        "nodes": [
+            node(
+                {
+                    "name": "export",
+                    "sql": "SELECT timestamp, session_id FROM gcs_landing",
                 }
             )
         ],

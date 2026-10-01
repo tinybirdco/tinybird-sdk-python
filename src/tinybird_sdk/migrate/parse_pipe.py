@@ -19,6 +19,7 @@ from .types import (
     PipeTokenModel,
     PipeTypeModel,
     ResourceFile,
+    SinkGCSModel,
     SinkKafkaModel,
     SinkModel,
     SinkS3Model,
@@ -600,7 +601,7 @@ def parse_pipe_file(resource: ResourceFile) -> PipeModel:
             copy_mode = value
         elif key == "EXPORT_SERVICE":
             normalized = parse_quoted_value(value).lower()
-            if normalized not in {"kafka", "s3"}:
+            if normalized not in {"kafka", "s3", "gcs_hmac"}:
                 raise MigrationParseError(
                     resource.file_path,
                     "pipe",
@@ -721,7 +722,7 @@ def parse_pipe_file(resource: ResourceFile) -> PipeModel:
             )
 
         has_kafka_directives = export_topic is not None
-        has_s3_directives = any(
+        has_blob_directives = any(
             value is not None
             for value in (
                 export_bucket_uri,
@@ -731,7 +732,7 @@ def parse_pipe_file(resource: ResourceFile) -> PipeModel:
             )
         )
 
-        if has_kafka_directives and has_s3_directives:
+        if has_kafka_directives and has_blob_directives:
             raise MigrationParseError(
                 resource.file_path,
                 "pipe",
@@ -739,8 +740,11 @@ def parse_pipe_file(resource: ResourceFile) -> PipeModel:
                 "Sink pipe cannot mix Kafka and S3 export directives.",
             )
 
+        # S3 and GCS sinks share the same EXPORT_* directive shape, so when EXPORT_SERVICE
+        # is omitted we default to "s3" (matching the SDK's historical behavior); GCS
+        # sinks must set EXPORT_SERVICE gcs_hmac explicitly to be recognized.
         inferred_service = export_service or (
-            "kafka" if has_kafka_directives else "s3" if has_s3_directives else None
+            "kafka" if has_kafka_directives else "s3" if has_blob_directives else None
         )
         if not inferred_service:
             raise MigrationParseError(
@@ -751,7 +755,7 @@ def parse_pipe_file(resource: ResourceFile) -> PipeModel:
             )
 
         if inferred_service == "kafka":
-            if has_s3_directives:
+            if has_blob_directives:
                 raise MigrationParseError(
                     resource.file_path,
                     "pipe",
@@ -793,7 +797,7 @@ def parse_pipe_file(resource: ResourceFile) -> PipeModel:
                 topic=export_topic,
                 schedule=export_schedule,
             )
-        else:
+        elif inferred_service in {"s3", "gcs_hmac"}:
             if has_kafka_directives:
                 raise MigrationParseError(
                     resource.file_path,
@@ -814,15 +818,34 @@ def parse_pipe_file(resource: ResourceFile) -> PipeModel:
                     "S3 sinks require EXPORT_BUCKET_URI, EXPORT_FILE_TEMPLATE, EXPORT_FORMAT, and EXPORT_SCHEDULE.",
                 )
 
-            sink = SinkS3Model(
-                service="s3",
-                connection_name=export_connection_name,
-                bucket_uri=export_bucket_uri,
-                file_template=export_file_template,
-                format=export_format,
-                schedule=export_schedule,
-                strategy=export_strategy,  # type: ignore[arg-type]
-                compression=export_compression,  # type: ignore[arg-type]
+            if inferred_service == "gcs_hmac":
+                sink = SinkGCSModel(
+                    service="gcs_hmac",
+                    connection_name=export_connection_name,
+                    bucket_uri=export_bucket_uri,
+                    file_template=export_file_template,
+                    format=export_format,
+                    schedule=export_schedule,
+                    strategy=export_strategy,  # type: ignore[arg-type]
+                    compression=export_compression,  # type: ignore[arg-type]
+                )
+            else:
+                sink = SinkS3Model(
+                    service="s3",
+                    connection_name=export_connection_name,
+                    bucket_uri=export_bucket_uri,
+                    file_template=export_file_template,
+                    format=export_format,
+                    schedule=export_schedule,
+                    strategy=export_strategy,  # type: ignore[arg-type]
+                    compression=export_compression,  # type: ignore[arg-type]
+                )
+        else:
+            raise MigrationParseError(
+                resource.file_path,
+                "pipe",
+                resource.name,
+                f'Unsupported EXPORT_SERVICE in strict mode: "{inferred_service}"',
             )
 
     params: list[PipeParamModel]
