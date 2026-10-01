@@ -339,6 +339,57 @@ class TinybirdApi:
         except json.JSONDecodeError:
             return {}
 
+    def sample_datasource(
+        self,
+        datasource_name: str,
+        options: dict[str, Any] | None = None,
+        api_options: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Start a sample import job for an S3/GCS/DynamoDB connected data source.
+
+        For blob storage (S3/GCS) connectors, ``max_files`` bounds how many files
+        are imported (default 1, max 10). For DynamoDB, the sample is bounded by
+        either ``rows`` or ``max_bytes`` (mutually exclusive), or ``full_export``
+        triggers a full PITR export of the whole table instead of a bounded scan.
+
+        Options:
+            max_files: Maximum number of files to import for blob storage connectors.
+            rows: For DynamoDB, the maximum number of rows to scan and import
+                (mutually exclusive with ``max_bytes``).
+            max_bytes: For DynamoDB, the maximum approximate JSONEachRow bytes to
+                import, e.g. ``"500MB"`` (mutually exclusive with ``rows``).
+            full_export: For DynamoDB, trigger a full PITR export instead of a
+                bounded scan.
+        """
+        options = options or {}
+        api_options = api_options or {}
+
+        rows = options.get("rows")
+        max_bytes = options.get("max_bytes")
+        if rows is not None and max_bytes is not None:
+            raise ValueError("'rows' and 'max_bytes' are mutually exclusive; pass only one")
+
+        payload: dict[str, Any] = {
+            "max_files": options.get("max_files", 1),
+            "full_export": bool(options.get("full_export", False)),
+        }
+        if rows is not None:
+            payload["rows"] = rows
+        if max_bytes is not None:
+            payload["max_bytes"] = max_bytes
+
+        response = self.request(
+            f"/v0/datasources/{datasource_name}/sample",
+            method="POST",
+            token=api_options.get("token"),
+            headers={"Content-Type": "application/json"},
+            body=json.dumps(payload),
+            timeout=options.get("timeout", api_options.get("timeout")),
+        )
+        if not response.ok:
+            self._raise_for_error(response.status_code, response.text)
+        return response.json()
+
     def create_token(
         self,
         body: dict[str, Any],
