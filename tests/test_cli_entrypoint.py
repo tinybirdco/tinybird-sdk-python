@@ -62,7 +62,7 @@ def test_cli_entrypoint_delegates_non_sdk_commands(monkeypatch: pytest.MonkeyPat
     monkeypatch.setattr(
         cli_index,
         "_run_installed_tinybird_cli",
-        lambda argv: 7 if argv == ["build", "--dry-run"] else 1,
+        lambda argv: 7 if argv == ["pull", "--force"] else 1,
     )
     monkeypatch.setattr(
         cli_index,
@@ -74,7 +74,7 @@ def test_cli_entrypoint_delegates_non_sdk_commands(monkeypatch: pytest.MonkeyPat
         "run_migrate",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("migrate should not run")),
     )
-    assert cli_index.main(["build", "--dry-run"]) == 7
+    assert cli_index.main(["pull", "--force"]) == 7
 
 
 def test_cli_entrypoint_delegates_empty_argv(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -210,3 +210,134 @@ def test_cli_entrypoint_migrate_failure_returns_error(monkeypatch: pytest.Monkey
         lambda *_args, **_kwargs: {"success": False, "errors": ["boom"]},
     )
     assert cli_index.main(["migrate", "legacy.datasource"]) == 1
+
+
+def _deny_delegation(monkeypatch: pytest.MonkeyPatch, command: str) -> None:
+    monkeypatch.setattr(
+        cli_index,
+        "_run_installed_tinybird_cli",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError(f"should not delegate {command}")
+        ),
+    )
+
+
+def test_cli_entrypoint_runs_build_locally(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _deny_delegation(monkeypatch, "build")
+    calls: list[dict] = []
+
+    def fake_run_build(options: dict) -> SimpleNamespace:
+        calls.append(options)
+        return SimpleNamespace(
+            success=True,
+            error=None,
+            duration_ms=42,
+            build=None,
+            deploy=None,
+            branch_info=SimpleNamespace(
+                git_branch="feature-x",
+                tinybird_branch="feature_x",
+                was_created=True,
+                dashboard_url="https://app.tinybird.co/feature_x",
+                is_local=False,
+            ),
+        )
+
+    monkeypatch.setattr(cli_index, "run_build", fake_run_build)
+
+    assert cli_index.main(["build", "--branch"]) == 0
+    assert calls == [{"dry_run": False, "dev_mode_override": "branch"}]
+    out = capsys.readouterr().out
+    assert "Build completed" in out
+    assert "Tinybird branch: feature_x" in out
+    assert "Dashboard: https://app.tinybird.co/feature_x" in out
+
+
+def test_cli_entrypoint_build_dry_run_passes_flags(monkeypatch: pytest.MonkeyPatch) -> None:
+    _deny_delegation(monkeypatch, "build")
+    calls: list[dict] = []
+
+    def fake_run_build(options: dict) -> SimpleNamespace:
+        calls.append(options)
+        return SimpleNamespace(
+            success=True, error=None, duration_ms=1, build=None, deploy=None, branch_info=None
+        )
+
+    monkeypatch.setattr(cli_index, "run_build", fake_run_build)
+
+    assert cli_index.main(["build", "--dry-run", "--local"]) == 0
+    assert calls == [{"dry_run": True, "dev_mode_override": "local"}]
+
+
+def test_cli_entrypoint_build_failure_returns_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    _mute_output(monkeypatch)
+    _deny_delegation(monkeypatch, "build")
+    monkeypatch.setattr(
+        cli_index,
+        "run_build",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            success=False, error="boom", duration_ms=1, build=None, deploy=None, branch_info=None
+        ),
+    )
+    assert cli_index.main(["build"]) == 1
+
+
+def test_cli_entrypoint_runs_deploy_locally(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _deny_delegation(monkeypatch, "deploy")
+    calls: list[dict] = []
+
+    def fake_run_deploy(options: dict) -> SimpleNamespace:
+        calls.append(options)
+        return SimpleNamespace(success=True, error=None, duration_ms=99, build=None, deploy=None)
+
+    monkeypatch.setattr(cli_index, "run_deploy", fake_run_deploy)
+
+    assert cli_index.main(["deploy", "--check", "--allow-destructive-operations"]) == 0
+    assert calls == [{"check": True, "allow_destructive_operations": True}]
+    out = capsys.readouterr().out
+    assert "Deploy completed" in out
+
+
+def test_cli_entrypoint_deploy_failure_returns_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    _mute_output(monkeypatch)
+    _deny_delegation(monkeypatch, "deploy")
+    monkeypatch.setattr(
+        cli_index,
+        "run_deploy",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            success=False, error="deploy boom", duration_ms=1, build=None, deploy=None
+        ),
+    )
+    assert cli_index.main(["deploy"]) == 1
+
+
+def test_cli_entrypoint_runs_dev_locally(monkeypatch: pytest.MonkeyPatch) -> None:
+    _deny_delegation(monkeypatch, "dev")
+    calls: list[dict] = []
+
+    def fake_run_dev(options: dict) -> dict:
+        calls.append(options)
+        return {"success": True}
+
+    monkeypatch.setattr(cli_index, "run_dev", fake_run_dev)
+
+    assert cli_index.main(["dev", "--local"]) == 0
+    assert calls == [{"dev_mode_override": "local"}]
+
+
+def test_cli_entrypoint_dev_failure_returns_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    _mute_output(monkeypatch)
+    _deny_delegation(monkeypatch, "dev")
+    monkeypatch.setattr(
+        cli_index, "run_dev", lambda *_args, **_kwargs: {"success": False, "error": "dev boom"}
+    )
+    assert cli_index.main(["dev"]) == 1
+
+
+def test_cli_entrypoint_build_rejects_local_and_branch_together() -> None:
+    with pytest.raises(SystemExit):
+        cli_index.main(["build", "--local", "--branch"])
