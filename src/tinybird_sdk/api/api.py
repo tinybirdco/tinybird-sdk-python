@@ -287,6 +287,65 @@ class TinybirdApi:
             self._raise_for_error(response.status_code, response.text)
         return response.json()
 
+    def analyze(
+        self,
+        options: dict[str, Any],
+        api_options: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Analyze a local file or URL and return inferred schema/dialect info.
+
+        Wraps the Tinybird Analyze API (``POST /v0/analyze``), matching
+        ``tb datasource analyze <url_or_file>``: infers column names, types,
+        and (for CSV) dialect before a data source is even defined.
+        """
+        api_options = api_options or {}
+        source_url = options.get("url")
+        file_path = options.get("file")
+
+        if not source_url and not file_path:
+            raise ValueError("Either 'url' or 'file' must be provided in options")
+        if source_url and file_path:
+            raise ValueError("Only one of 'url' or 'file' can be provided, not both")
+
+        timeout = options.get("timeout", api_options.get("timeout"))
+
+        if source_url:
+            if not isinstance(source_url, str):
+                raise ValueError("'url' must be a valid string")
+            query: dict[str, str] = {"url": source_url}
+            detected_format = detect_data_format(source_url)
+            if detected_format:
+                query["format"] = detected_format
+            response = self.request(
+                f"/v0/analyze?{urlencode(query)}",
+                method="POST",
+                token=api_options.get("token"),
+                timeout=timeout,
+            )
+        else:
+            if not isinstance(file_path, str):
+                raise ValueError("'file' must be a valid string path")
+            with open(file_path, "rb") as fp:
+                file_content = fp.read()
+            detected_format = detect_data_format(file_path)
+            query = {"format": detected_format} if detected_format else {}
+            content_type, multipart = create_multipart_body(
+                files=[("csv", file_path, file_content, None)],
+            )
+            request_path = f"/v0/analyze?{urlencode(query)}" if query else "/v0/analyze"
+            response = self.request(
+                request_path,
+                method="POST",
+                token=api_options.get("token"),
+                headers={"Content-Type": content_type},
+                body=multipart,
+                timeout=timeout,
+            )
+
+        if not response.ok:
+            self._raise_for_error(response.status_code, response.text)
+        return response.json()
+
     def delete_datasource(
         self,
         datasource_name: str,

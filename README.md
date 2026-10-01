@@ -966,6 +966,29 @@ params_schema = infer_params_schema(top_pages)
 output_schema = infer_output_schema(top_pages)
 ```
 
+It can also infer a schema from real sample data, before a datasource is even defined, matching `tb datasource analyze <url_or_file>`:
+
+```python
+from tinybird_sdk import TinybirdApi
+from tinybird_sdk.infer import generate_schema_code, parse_analyze_response
+
+api = TinybirdApi({"base_url": "https://api.tinybird.co", "token": token})
+
+response = api.analyze({"file": "./events.csv"})
+# or: api.analyze({"url": "https://example.com/events.ndjson"})
+
+analyzed = parse_analyze_response(response)
+print(generate_schema_code(analyzed, "events"))
+# events = define_datasource('events', {
+#     'schema': {
+#         'id': t.int64(),
+#         'name': t.string().nullable(),
+#     },
+# })
+#
+# EventsRow = dict
+```
+
 ## License
 
 MIT
