@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `TinybirdApi.sample_datasource()` starts a sample import job for S3/GCS/DynamoDB connected data sources via `POST /v0/datasources/{name}/sample`. For blob storage connectors `max_files` bounds the number of imported files; for DynamoDB the sample is bounded by either `rows` or `max_bytes` (mutually exclusive), or `full_export` triggers a full PITR export of the whole table instead of a bounded scan. This lets cloud branches and local import bounded DynamoDB samples, avoiding slow exports and unnecessary egress costs on branches.
+
 ## [0.4.0] - 2026-06-29
 
 ### Added
