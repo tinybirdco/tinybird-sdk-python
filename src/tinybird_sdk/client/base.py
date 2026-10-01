@@ -35,6 +35,20 @@ class _DatasourcesNamespace:
         return self._client._truncate_datasource(datasource_name, options or {})
 
 
+class _SecretsNamespace:
+    def __init__(self, client: "TinybirdClient"):
+        self._client = client
+
+    def list(self, options: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+        return self._client._list_secrets(options or {})
+
+    def set(self, name: str, value: str, options: dict[str, Any] | None = None) -> dict[str, Any]:
+        return self._client._set_secret(name, value, options or {})
+
+    def remove(self, name: str, options: dict[str, Any] | None = None) -> dict[str, Any]:
+        return self._client._delete_secret(name, options or {})
+
+
 class TinybirdClient:
     def __init__(self, config: dict[str, Any]):
         if not config.get("base_url"):
@@ -47,6 +61,7 @@ class TinybirdClient:
         self._resolved_context: ClientContext | None = None
 
         self.datasources = _DatasourcesNamespace(self)
+        self.secrets = _SecretsNamespace(self)
         self.tokens = TokensNamespace(
             self._get_token,
             self._config["base_url"],
@@ -83,6 +98,30 @@ class TinybirdClient:
         token = self._get_token()
         try:
             return self._get_api(token).truncate_datasource(datasource_name, options)
+        except Exception as error:
+            self._rethrow_api_error(error)
+            raise AssertionError("unreachable")
+
+    def _list_secrets(self, options: dict[str, Any]) -> list[dict[str, Any]]:
+        token = self._get_token()
+        try:
+            return self._get_api(token).list_secrets(options)
+        except Exception as error:
+            self._rethrow_api_error(error)
+            raise AssertionError("unreachable")
+
+    def _set_secret(self, name: str, value: str, options: dict[str, Any]) -> dict[str, Any]:
+        token = self._get_token()
+        try:
+            return self._get_api(token).set_secret(name, value, options)
+        except Exception as error:
+            self._rethrow_api_error(error)
+            raise AssertionError("unreachable")
+
+    def _delete_secret(self, name: str, options: dict[str, Any]) -> dict[str, Any]:
+        token = self._get_token()
+        try:
+            return self._get_api(token).delete_secret(name, options)
         except Exception as error:
             self._rethrow_api_error(error)
             raise AssertionError("unreachable")

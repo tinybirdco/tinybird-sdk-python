@@ -854,6 +854,21 @@ top_events = define_endpoint(
 )
 ```
 
+### Secrets Management
+
+The `secret()` helper used above only emits a `{{ tb_secret("NAME") }}` placeholder reference in generated datafiles — it doesn't set the underlying value. Use `client.secrets` to manage the values those placeholders resolve to:
+
+```python
+# Create or update a secret's value (idempotent)
+client.secrets.set("KAFKA_KEY", "<value>")
+
+# List secrets (name/created_at/updated_at only — values are never returned)
+client.secrets.list()
+
+# Remove a secret
+client.secrets.remove("KAFKA_KEY")
+```
+
 ## Type Validators
 
 Use `t.*` to define column types:
