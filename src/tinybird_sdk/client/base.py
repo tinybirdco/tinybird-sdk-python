@@ -35,6 +35,23 @@ class _DatasourcesNamespace:
         return self._client._truncate_datasource(datasource_name, options or {})
 
 
+class _JobsNamespace:
+    def __init__(self, client: "TinybirdClient"):
+        self._client = client
+
+    def list(self, options: dict[str, Any] | None = None) -> dict[str, Any]:
+        return self._client._list_jobs(options or {})
+
+    def get(self, job_id: str, options: dict[str, Any] | None = None) -> dict[str, Any]:
+        return self._client._get_job(job_id, options or {})
+
+    def cancel(self, job_id: str, options: dict[str, Any] | None = None) -> dict[str, Any]:
+        return self._client._cancel_job(job_id, options or {})
+
+    def retry(self, job_id: str, options: dict[str, Any] | None = None) -> dict[str, Any]:
+        return self._client._retry_job(job_id, options or {})
+
+
 class TinybirdClient:
     def __init__(self, config: dict[str, Any]):
         if not config.get("base_url"):
@@ -47,6 +64,7 @@ class TinybirdClient:
         self._resolved_context: ClientContext | None = None
 
         self.datasources = _DatasourcesNamespace(self)
+        self.jobs = _JobsNamespace(self)
         self.tokens = TokensNamespace(
             self._get_token,
             self._config["base_url"],
@@ -93,6 +111,38 @@ class TinybirdClient:
         token = self._get_token()
         try:
             return self._get_api(token).ingest_batch(datasource_name, [event], options)
+        except Exception as error:
+            self._rethrow_api_error(error)
+            raise AssertionError("unreachable")
+
+    def _list_jobs(self, options: dict[str, Any]) -> dict[str, Any]:
+        token = self._get_token()
+        try:
+            return self._get_api(token).list_jobs(options)
+        except Exception as error:
+            self._rethrow_api_error(error)
+            raise AssertionError("unreachable")
+
+    def _get_job(self, job_id: str, options: dict[str, Any]) -> dict[str, Any]:
+        token = self._get_token()
+        try:
+            return self._get_api(token).get_job(job_id, options)
+        except Exception as error:
+            self._rethrow_api_error(error)
+            raise AssertionError("unreachable")
+
+    def _cancel_job(self, job_id: str, options: dict[str, Any]) -> dict[str, Any]:
+        token = self._get_token()
+        try:
+            return self._get_api(token).cancel_job(job_id, options)
+        except Exception as error:
+            self._rethrow_api_error(error)
+            raise AssertionError("unreachable")
+
+    def _retry_job(self, job_id: str, options: dict[str, Any]) -> dict[str, Any]:
+        token = self._get_token()
+        try:
+            return self._get_api(token).retry_job(job_id, options)
         except Exception as error:
             self._rethrow_api_error(error)
             raise AssertionError("unreachable")

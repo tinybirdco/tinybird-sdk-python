@@ -363,6 +363,65 @@ class TinybirdApi:
             self._raise_for_error(response.status_code, response.text)
         return response.json()
 
+    def list_jobs(self, options: dict[str, Any] | None = None) -> dict[str, Any]:
+        options = options or {}
+
+        query: dict[str, str] = {}
+        if options.get("status"):
+            query["status"] = options["status"]
+        if options.get("kind"):
+            query["kind"] = options["kind"]
+
+        path = "/v0/jobs"
+        if query:
+            path = f"{path}?{urlencode(query)}"
+
+        response = self.request(
+            path,
+            method="GET",
+            token=options.get("token"),
+            timeout=options.get("timeout"),
+        )
+        if not response.ok:
+            self._raise_for_error(response.status_code, response.text)
+        return response.json()
+
+    def get_job(self, job_id: str, options: dict[str, Any] | None = None) -> dict[str, Any]:
+        options = options or {}
+        response = self.request(
+            f"/v0/jobs/{job_id}",
+            method="GET",
+            token=options.get("token"),
+            timeout=options.get("timeout"),
+        )
+        if not response.ok:
+            self._raise_for_error(response.status_code, response.text)
+        return response.json()
+
+    def cancel_job(self, job_id: str, options: dict[str, Any] | None = None) -> dict[str, Any]:
+        options = options or {}
+        response = self.request(
+            f"/v0/jobs/{job_id}/cancel",
+            method="POST",
+            token=options.get("token"),
+            timeout=options.get("timeout"),
+        )
+        if not response.ok:
+            self._raise_for_error(response.status_code, response.text)
+        return response.json()
+
+    def retry_job(self, job_id: str, options: dict[str, Any] | None = None) -> dict[str, Any]:
+        options = options or {}
+        response = self.request(
+            f"/v0/jobs/{job_id}/retry",
+            method="POST",
+            token=options.get("token"),
+            timeout=options.get("timeout"),
+        )
+        if not response.ok:
+            self._raise_for_error(response.status_code, response.text)
+        return response.json()
+
     def _timeout_seconds(self, timeout_ms: int | None) -> float:
         timeout = timeout_ms if timeout_ms is not None else self._default_timeout
         return max(timeout / 1000.0, 0.001)
