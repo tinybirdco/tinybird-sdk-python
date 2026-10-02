@@ -272,7 +272,7 @@ class TinybirdApi:
             with open(file_path_str, "rb") as fp:
                 file_content = fp.read()
             content_type, multipart = create_multipart_body(
-                files=[("csv", file_path_str, file_content, None)],
+                files=[(detected_format or "csv", file_path_str, file_content, None)],
             )
             response = self.request(
                 f"/v0/datasources?{urlencode(query)}",

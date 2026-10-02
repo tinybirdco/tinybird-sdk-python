@@ -124,6 +124,35 @@ def test_append_delete_and_truncate_paths(monkeypatch: pytest.MonkeyPatch, tmp_p
     assert api.truncate_datasource("events") == {}
 
 
+@pytest.mark.parametrize(
+    ("filename", "field_name"),
+    [
+        ("events.csv", "csv"),
+        ("events.ndjson", "ndjson"),
+        ("events.jsonl", "ndjson"),
+        ("events.parquet", "parquet"),
+        ("events.dat", "csv"),
+    ],
+)
+def test_append_file_uses_format_as_multipart_field_name(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, filename: str, field_name: str
+) -> None:
+    calls: list[dict[str, Any]] = []
+
+    def fake_fetch(_url: str, **kwargs: Any) -> _FakeResponse:
+        calls.append(kwargs)
+        return _FakeResponse(200, {"ok": True})
+
+    monkeypatch.setattr(api_module, "tinybird_fetch", fake_fetch)
+    api = TinybirdApi({"base_url": "https://api.tinybird.co", "token": "p.token"})
+
+    local_file = tmp_path / filename
+    local_file.write_bytes(b"data")
+    api.append_datasource("events", {"file": str(local_file)})
+
+    assert f'name="{field_name}"; filename="{filename}"'.encode() in calls[0]["body"]
+
+
 def test_append_requires_either_url_or_file() -> None:
     api = TinybirdApi({"base_url": "https://api.tinybird.co", "token": "p.token"})
     with pytest.raises(ValueError, match="Either 'url' or 'file'"):
