@@ -5,15 +5,10 @@ from dataclasses import asdict
 import json
 import sys
 
-from .commands.build import run_build
-from .commands.deploy import run_deploy
-from .commands.dev import run_dev
 from .commands.generate import run_generate
 from .commands.init import run_init
 from .commands.migrate import run_migrate
-from .output import BranchDisplayInfo, output
-
-_SDK_OWNED_COMMANDS = {"init", "generate", "migrate", "build", "deploy", "dev"}
+from .output import output
 
 
 def _print_json(payload: object) -> None:
@@ -86,53 +81,6 @@ def create_cli() -> argparse.ArgumentParser:
     )
     migrate_cmd.add_argument("--json", action="store_true", help="Print migration result as JSON")
 
-    build_cmd = sub.add_parser("build", help="Build and deploy Tinybird resources to a branch")
-    build_cmd.add_argument(
-        "--dry-run", action="store_true", help="Validate resources without deploying"
-    )
-    build_mode = build_cmd.add_mutually_exclusive_group()
-    build_mode.add_argument(
-        "--local",
-        action="store_const",
-        dest="dev_mode",
-        const="local",
-        help="Build against Tinybird Local",
-    )
-    build_mode.add_argument(
-        "--branch",
-        action="store_const",
-        dest="dev_mode",
-        const="branch",
-        help="Build against a cloud branch",
-    )
-
-    deploy_cmd = sub.add_parser("deploy", help="Deploy Tinybird resources to the main workspace")
-    deploy_cmd.add_argument(
-        "--check", action="store_true", help="Validate the deployment without applying it"
-    )
-    deploy_cmd.add_argument(
-        "--allow-destructive-operations",
-        action="store_true",
-        help="Allow deployments that include destructive operations",
-    )
-
-    dev_cmd = sub.add_parser("dev", help="Build Tinybird resources and watch for changes")
-    dev_mode = dev_cmd.add_mutually_exclusive_group()
-    dev_mode.add_argument(
-        "--local",
-        action="store_const",
-        dest="dev_mode",
-        const="local",
-        help="Build against Tinybird Local",
-    )
-    dev_mode.add_argument(
-        "--branch",
-        action="store_const",
-        dest="dev_mode",
-        const="branch",
-        help="Build against a cloud branch",
-    )
-
     return parser
 
 
@@ -140,7 +88,7 @@ def main(argv: list[str] | None = None) -> int:
     normalized_argv = list(argv) if argv is not None else list(sys.argv[1:])
 
     # SDK-owned commands stay local; all other commands are delegated to Tinybird CLI.
-    if not normalized_argv or normalized_argv[0] not in _SDK_OWNED_COMMANDS:
+    if not normalized_argv or normalized_argv[0] not in {"init", "generate", "migrate"}:
         return _run_installed_tinybird_cli(normalized_argv)
 
     parser = create_cli()
@@ -192,56 +140,6 @@ def main(argv: list[str] | None = None) -> int:
         if generate_result.output_dir:
             print(f"Written to: {generate_result.output_dir}")
         print(f"Completed in {output.format_duration(generate_result.duration_ms)}")
-        return 0
-
-    if args.command == "build":
-        build_result = run_build(
-            {
-                "dry_run": args.dry_run,
-                "dev_mode_override": args.dev_mode,
-            }
-        )
-        if not build_result.success:
-            output.show_build_failure()
-            if build_result.error:
-                output.error(build_result.error)
-            return 1
-
-        output.show_build_success(build_result.duration_ms)
-        if build_result.branch_info:
-            output.show_branch_info(
-                BranchDisplayInfo(
-                    mode="local" if build_result.branch_info.is_local else "branch",
-                    git_branch=build_result.branch_info.git_branch,
-                    tinybird_branch=build_result.branch_info.tinybird_branch,
-                    created=build_result.branch_info.was_created,
-                )
-            )
-            if build_result.branch_info.dashboard_url:
-                output.info(f"Dashboard: {build_result.branch_info.dashboard_url}")
-        return 0
-
-    if args.command == "deploy":
-        deploy_result = run_deploy(
-            {
-                "check": args.check,
-                "allow_destructive_operations": args.allow_destructive_operations,
-            }
-        )
-        if not deploy_result.success:
-            output.show_deploy_failure()
-            if deploy_result.error:
-                output.error(deploy_result.error)
-            return 1
-
-        output.show_deploy_success(deploy_result.duration_ms)
-        return 0
-
-    if args.command == "dev":
-        dev_result = run_dev({"dev_mode_override": args.dev_mode})
-        if not dev_result.get("success"):
-            output.error(dev_result.get("error") or "Dev failed")
-            return 1
         return 0
 
     migrate_result = run_migrate(
