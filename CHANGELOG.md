@@ -9,7 +9,7 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ### Added
 
-- `tinybird pull --as-code` generates Python SDK source (`datasources.py`, `pipes.py`, `client.py`) from the live workspace via the existing `codegen` module, instead of raw `.datasource`/`.pipe`/`.connection` files. This wires up `codegen`, which was previously unreachable from any CLI command.
+- `tinybird pull --as-code` generates Python SDK source (`datasources.py`, `pipes.py`, `client.py`) from the live workspace via the existing `codegen` module, instead of raw `.datasource`/`.pipe`/`.connection` files. This wires up `codegen`, which was previously unreachable from any CLI command. Plain `tinybird pull` (without `--as-code`) is unaffected and still delegates to the installed Tinybird CLI.
 
 ## [0.4.0] - 2026-06-29
 

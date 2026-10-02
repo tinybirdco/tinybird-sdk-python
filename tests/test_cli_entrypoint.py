@@ -222,10 +222,26 @@ def _deny_delegation(monkeypatch: pytest.MonkeyPatch, command: str) -> None:
     )
 
 
-def test_cli_entrypoint_runs_pull_locally(
+def test_cli_entrypoint_delegates_plain_pull(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[list[str]] = []
+    monkeypatch.setattr(
+        cli_index, "_run_installed_tinybird_cli", lambda argv: calls.append(list(argv)) or 0
+    )
+    monkeypatch.setattr(
+        cli_index,
+        "run_pull",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("pull should not run")),
+    )
+
+    assert cli_index.main(["pull"]) == 0
+    assert cli_index.main(["pull", "--force"]) == 0
+    assert calls == [["pull"], ["pull", "--force"]]
+
+
+def test_cli_entrypoint_runs_pull_as_code_locally(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    _deny_delegation(monkeypatch, "pull")
+    _deny_delegation(monkeypatch, "pull --as-code")
     calls: list[dict] = []
 
     def fake_run_pull(options: dict) -> SimpleNamespace:
@@ -234,40 +250,24 @@ def test_cli_entrypoint_runs_pull_locally(
             success=True,
             error=None,
             duration_ms=7,
-            output_dir="./tinybird-datafiles",
+            output_dir="./lib",
             files=[SimpleNamespace(), SimpleNamespace()],
             stats=None,
         )
 
     monkeypatch.setattr(cli_index, "run_pull", fake_run_pull)
 
-    assert cli_index.main(["pull", "--output-dir", "./tinybird-datafiles", "--force"]) == 0
-    assert calls == [{"output_dir": "./tinybird-datafiles", "overwrite": True, "as_code": False}]
+    assert cli_index.main(["pull", "--as-code", "--output-dir", "./lib", "--force"]) == 0
+    assert calls == [{"output_dir": "./lib", "overwrite": True, "as_code": True}]
     out = capsys.readouterr().out
-    assert "Pulled 2 datafiles" in out
-    assert "Written to: ./tinybird-datafiles" in out
+    assert "Pulled 2 source files" in out
+    assert "Written to: ./lib" in out
 
 
-def test_cli_entrypoint_pull_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
-    _deny_delegation(monkeypatch, "pull")
-    calls: list[dict] = []
-
-    def fake_run_pull(options: dict) -> SimpleNamespace:
-        calls.append(options)
-        return SimpleNamespace(
-            success=True, error=None, duration_ms=1, output_dir=".", files=[], stats=None
-        )
-
-    monkeypatch.setattr(cli_index, "run_pull", fake_run_pull)
-
-    assert cli_index.main(["pull"]) == 0
-    assert calls == [{"output_dir": ".", "overwrite": False, "as_code": False}]
-
-
-def test_cli_entrypoint_pull_as_code(
+def test_cli_entrypoint_pull_as_code_defaults(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    _deny_delegation(monkeypatch, "pull")
+    _deny_delegation(monkeypatch, "pull --as-code")
     calls: list[dict] = []
 
     def fake_run_pull(options: dict) -> SimpleNamespace:
@@ -289,14 +289,16 @@ def test_cli_entrypoint_pull_as_code(
     assert "Pulled 3 source files" in out
 
 
-def test_cli_entrypoint_pull_failure_returns_error(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_cli_entrypoint_pull_as_code_failure_returns_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     _mute_output(monkeypatch)
-    _deny_delegation(monkeypatch, "pull")
+    _deny_delegation(monkeypatch, "pull --as-code")
     monkeypatch.setattr(
         cli_index,
         "run_pull",
         lambda *_args, **_kwargs: SimpleNamespace(
-            success=False, error="File already exists", duration_ms=1, output_dir=None, files=None
+            success=False, error="Codegen failed", duration_ms=1, output_dir=None, files=None
         ),
     )
-    assert cli_index.main(["pull"]) == 1
+    assert cli_index.main(["pull", "--as-code"]) == 1

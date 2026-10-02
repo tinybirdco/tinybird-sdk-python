@@ -11,7 +11,11 @@ from .commands.migrate import run_migrate
 from .commands.pull import run_pull
 from .output import output
 
-_SDK_OWNED_COMMANDS = {"init", "generate", "migrate", "pull"}
+_SDK_OWNED_COMMANDS = {"init", "generate", "migrate"}
+
+
+def _pull_wants_as_code(argv: list[str]) -> bool:
+    return "--as-code" in argv[1:]
 
 
 def _print_json(payload: object) -> None:
@@ -84,8 +88,12 @@ def create_cli() -> argparse.ArgumentParser:
     )
     migrate_cmd.add_argument("--json", action="store_true", help="Print migration result as JSON")
 
-    pull_cmd = sub.add_parser("pull", help="Pull datafiles for existing resources")
-    pull_cmd.add_argument("-o", "--output-dir", default=".", help="Target folder for pulled files")
+    # Plain `pull` is delegated to the installed Tinybird CLI (see `owns_command` in main()).
+    # This subparser only ever runs for `pull --as-code`.
+    pull_cmd = sub.add_parser(
+        "pull", help="Generate Python SDK source from the live workspace (--as-code only)"
+    )
+    pull_cmd.add_argument("-o", "--output-dir", default=".", help="Target folder for generated files")
     pull_cmd.add_argument("--force", action="store_true", help="Overwrite existing files")
     pull_cmd.add_argument(
         "--as-code",
@@ -103,7 +111,13 @@ def main(argv: list[str] | None = None) -> int:
     normalized_argv = list(argv) if argv is not None else list(sys.argv[1:])
 
     # SDK-owned commands stay local; all other commands are delegated to Tinybird CLI.
-    if not normalized_argv or normalized_argv[0] not in _SDK_OWNED_COMMANDS:
+    # `pull` is delegated too, except for `--as-code`, which the installed CLI has no
+    # equivalent for (it generates Python SDK source, not raw datafiles).
+    owns_command = bool(normalized_argv) and (
+        normalized_argv[0] in _SDK_OWNED_COMMANDS
+        or (normalized_argv[0] == "pull" and _pull_wants_as_code(normalized_argv))
+    )
+    if not owns_command:
         return _run_installed_tinybird_cli(normalized_argv)
 
     parser = create_cli()
