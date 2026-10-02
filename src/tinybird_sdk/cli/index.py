@@ -93,7 +93,9 @@ def create_cli() -> argparse.ArgumentParser:
     pull_cmd = sub.add_parser(
         "pull", help="Generate Python SDK source from the live workspace (--as-code only)"
     )
-    pull_cmd.add_argument("-o", "--output-dir", default=".", help="Target folder for generated files")
+    pull_cmd.add_argument(
+        "-o", "--output-dir", default=".", help="Target folder for generated files"
+    )
     pull_cmd.add_argument("--force", action="store_true", help="Overwrite existing files")
     pull_cmd.add_argument(
         "--as-code",
