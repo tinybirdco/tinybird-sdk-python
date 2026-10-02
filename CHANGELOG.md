@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- `append_datasource` with a local `file` now names the multipart form field after the detected format (`csv`, `ndjson` or `parquet`) instead of always using `csv`, so NDJSON and Parquet uploads are accepted by the API.
+
 ## [0.4.0] - 2026-06-29
 
 ### Added
