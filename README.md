@@ -408,6 +408,13 @@ tinybird pull --output-dir ./tinybird-datafiles
 tinybird pull --force
 ```
 
+Pass `--as-code` to generate Python SDK source (`datasources.py`, `pipes.py`, `client.py`) from the live workspace instead of raw `.datasource`/`.pipe`/`.connection` files:
+
+```bash
+tinybird pull --as-code
+tinybird pull --as-code --output-dir ./lib
+```
+
 ### `tinybird login`
 
 ```bash

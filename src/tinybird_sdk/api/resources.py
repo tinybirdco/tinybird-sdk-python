@@ -64,7 +64,7 @@ class PipeParam:
 
 
 PipeType = Literal["endpoint", "materialized", "copy", "pipe"]
-ResourceFileType = Literal["datasource", "pipe", "connection"]
+ResourceFileType = Literal["datasource", "pipe", "connection", "code"]
 
 
 @dataclass(frozen=True, slots=True)

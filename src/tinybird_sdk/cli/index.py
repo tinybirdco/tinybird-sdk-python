@@ -8,7 +8,14 @@ import sys
 from .commands.generate import run_generate
 from .commands.init import run_init
 from .commands.migrate import run_migrate
+from .commands.pull import run_pull
 from .output import output
+
+_SDK_OWNED_COMMANDS = {"init", "generate", "migrate"}
+
+
+def _pull_wants_as_code(argv: list[str]) -> bool:
+    return "--as-code" in argv[1:]
 
 
 def _print_json(payload: object) -> None:
@@ -81,6 +88,24 @@ def create_cli() -> argparse.ArgumentParser:
     )
     migrate_cmd.add_argument("--json", action="store_true", help="Print migration result as JSON")
 
+    # Plain `pull` is delegated to the installed Tinybird CLI (see `owns_command` in main()).
+    # This subparser only ever runs for `pull --as-code`.
+    pull_cmd = sub.add_parser(
+        "pull", help="Generate Python SDK source from the live workspace (--as-code only)"
+    )
+    pull_cmd.add_argument(
+        "-o", "--output-dir", default=".", help="Target folder for generated files"
+    )
+    pull_cmd.add_argument("--force", action="store_true", help="Overwrite existing files")
+    pull_cmd.add_argument(
+        "--as-code",
+        action="store_true",
+        help=(
+            "Generate Python SDK source (datasources.py, pipes.py, client.py) from the live "
+            "workspace instead of raw .datasource/.pipe/.connection files"
+        ),
+    )
+
     return parser
 
 
@@ -88,7 +113,13 @@ def main(argv: list[str] | None = None) -> int:
     normalized_argv = list(argv) if argv is not None else list(sys.argv[1:])
 
     # SDK-owned commands stay local; all other commands are delegated to Tinybird CLI.
-    if not normalized_argv or normalized_argv[0] not in {"init", "generate", "migrate"}:
+    # `pull` is delegated too, except for `--as-code`, which the installed CLI has no
+    # equivalent for (it generates Python SDK source, not raw datafiles).
+    owns_command = bool(normalized_argv) and (
+        normalized_argv[0] in _SDK_OWNED_COMMANDS
+        or (normalized_argv[0] == "pull" and _pull_wants_as_code(normalized_argv))
+    )
+    if not owns_command:
         return _run_installed_tinybird_cli(normalized_argv)
 
     parser = create_cli()
@@ -140,6 +171,22 @@ def main(argv: list[str] | None = None) -> int:
         if generate_result.output_dir:
             print(f"Written to: {generate_result.output_dir}")
         print(f"Completed in {output.format_duration(generate_result.duration_ms)}")
+        return 0
+
+    if args.command == "pull":
+        pull_result = run_pull(
+            {"output_dir": args.output_dir, "overwrite": args.force, "as_code": args.as_code}
+        )
+        if not pull_result.success:
+            output.error(pull_result.error or "Pull failed")
+            return 1
+
+        file_count = len(pull_result.files or [])
+        noun = "source files" if args.as_code else "datafiles"
+        print(f"Pulled {file_count} {noun}")
+        if pull_result.output_dir:
+            print(f"Written to: {pull_result.output_dir}")
+        print(f"Completed in {output.format_duration(pull_result.duration_ms)}")
         return 0
 
     migrate_result = run_migrate(
