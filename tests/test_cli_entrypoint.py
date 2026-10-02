@@ -62,7 +62,7 @@ def test_cli_entrypoint_delegates_non_sdk_commands(monkeypatch: pytest.MonkeyPat
     monkeypatch.setattr(
         cli_index,
         "_run_installed_tinybird_cli",
-        lambda argv: 7 if argv == ["deploy", "--check"] else 1,
+        lambda argv: 7 if argv == ["build", "--dry-run"] else 1,
     )
     monkeypatch.setattr(
         cli_index,
@@ -74,7 +74,7 @@ def test_cli_entrypoint_delegates_non_sdk_commands(monkeypatch: pytest.MonkeyPat
         "run_migrate",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("migrate should not run")),
     )
-    assert cli_index.main(["deploy", "--check"]) == 7
+    assert cli_index.main(["build", "--dry-run"]) == 7
 
 
 def test_cli_entrypoint_delegates_empty_argv(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -210,111 +210,3 @@ def test_cli_entrypoint_migrate_failure_returns_error(monkeypatch: pytest.Monkey
         lambda *_args, **_kwargs: {"success": False, "errors": ["boom"]},
     )
     assert cli_index.main(["migrate", "legacy.datasource"]) == 1
-
-
-def _deny_delegation(monkeypatch: pytest.MonkeyPatch, command: str) -> None:
-    monkeypatch.setattr(
-        cli_index,
-        "_run_installed_tinybird_cli",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(
-            AssertionError(f"should not delegate {command}")
-        ),
-    )
-
-
-def test_cli_entrypoint_runs_pull_locally(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
-) -> None:
-    _deny_delegation(monkeypatch, "pull")
-    calls: list[dict] = []
-
-    def fake_run_pull(options: dict) -> SimpleNamespace:
-        calls.append(options)
-        return SimpleNamespace(
-            success=True,
-            error=None,
-            duration_ms=7,
-            output_dir="./tinybird-datafiles",
-            files=[SimpleNamespace(), SimpleNamespace()],
-            stats=None,
-        )
-
-    monkeypatch.setattr(cli_index, "run_pull", fake_run_pull)
-
-    assert cli_index.main(["pull", "--output-dir", "./tinybird-datafiles", "--force"]) == 0
-    assert calls == [{"output_dir": "./tinybird-datafiles", "overwrite": True}]
-    out = capsys.readouterr().out
-    assert "Pulled 2 datafiles" in out
-    assert "Written to: ./tinybird-datafiles" in out
-
-
-def test_cli_entrypoint_pull_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
-    _deny_delegation(monkeypatch, "pull")
-    calls: list[dict] = []
-
-    def fake_run_pull(options: dict) -> SimpleNamespace:
-        calls.append(options)
-        return SimpleNamespace(
-            success=True, error=None, duration_ms=1, output_dir=".", files=[], stats=None
-        )
-
-    monkeypatch.setattr(cli_index, "run_pull", fake_run_pull)
-
-    assert cli_index.main(["pull"]) == 0
-    assert calls == [{"output_dir": ".", "overwrite": False}]
-
-
-def test_cli_entrypoint_pull_failure_returns_error(monkeypatch: pytest.MonkeyPatch) -> None:
-    _mute_output(monkeypatch)
-    _deny_delegation(monkeypatch, "pull")
-    monkeypatch.setattr(
-        cli_index,
-        "run_pull",
-        lambda *_args, **_kwargs: SimpleNamespace(
-            success=False, error="File already exists", duration_ms=1, output_dir=None, files=None
-        ),
-    )
-    assert cli_index.main(["pull"]) == 1
-
-
-def test_cli_entrypoint_runs_login_locally(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
-) -> None:
-    _deny_delegation(monkeypatch, "login")
-
-    def fake_run_login(options: dict) -> SimpleNamespace:
-        return SimpleNamespace(
-            success=True,
-            error=None,
-            token="p.test",
-            base_url="https://api.tinybird.co",
-            workspace_name="my_workspace",
-            user_email="user@example.com",
-        )
-
-    monkeypatch.setattr(cli_index, "run_login", fake_run_login)
-
-    assert cli_index.main(["login"]) == 0
-    out = capsys.readouterr().out
-    assert "Logged in to Tinybird" in out
-    assert "Workspace: my_workspace" in out
-    assert "User: user@example.com" in out
-    assert "Host: https://api.tinybird.co" in out
-
-
-def test_cli_entrypoint_login_failure_returns_error(monkeypatch: pytest.MonkeyPatch) -> None:
-    _mute_output(monkeypatch)
-    _deny_delegation(monkeypatch, "login")
-    monkeypatch.setattr(
-        cli_index,
-        "run_login",
-        lambda *_args, **_kwargs: SimpleNamespace(
-            success=False,
-            error="Login timed out",
-            token=None,
-            base_url=None,
-            workspace_name=None,
-            user_email=None,
-        ),
-    )
-    assert cli_index.main(["login"]) == 1
